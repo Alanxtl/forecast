@@ -44,7 +44,7 @@ def get_all_commits(owner_name, repo_name):
     }
     """
 
-    csv_file = f"../../data/{owner_name}_{repo_name}.csv"
+    csv_file = f"./data/{owner_name}_{repo_name}.csv"
 
     cursor = None
     commits = []
@@ -110,7 +110,7 @@ def get_all_commits(owner_name, repo_name):
     logger.info(f"write {len(commits)} commits to {csv_file}")
 
 def get_last_commit_date(owner_name, repo_name):
-    csv_file = f"../../data/{owner_name}_{repo_name}.csv"
+    csv_file = f"./data/{owner_name}_{repo_name}.csv"
 
     if not os.path.exists(csv_file):
         get_all_commits(owner_name, repo_name)

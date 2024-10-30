@@ -5,7 +5,7 @@ class Config:
 
     def __init__(self):
         self.config_parsor = configparser.ConfigParser()
-        with open(f"../../config.ini","r") as file_object:
+        with open(f"./config.ini","r") as file_object:
             self.config_parsor.read_file(file_object)
             Config.config["token"] = self.config_parsor.get("DEFAULT","token")
 
