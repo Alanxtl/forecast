@@ -12,4 +12,9 @@ if not os.path.exists(conf["log_path"]):
     os.mkdir(conf["log_path"])
 
 if __name__ == "__main__":
-    get_last_commit_date("XS-MLVP", "env-xs-ov-00-bpu")
+    all = slice_all_commit_data("XS-MLVP", "env-xs-ov-00-bpu")
+    print(len(all))
+    for i in all:
+        for j in i:
+            print(j["committedDate"])
+        print("=====================================")

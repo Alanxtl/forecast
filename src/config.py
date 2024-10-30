@@ -10,6 +10,9 @@ class Config:
             Config.config["data_path"] = self.config_parsor.get("DEFAULT","data_path")
             Config.config["log_path"] = self.config_parsor.get("DEFAULT","log_path")
             Config.config["token"] = self.config_parsor.get("token","token")
+            Config.config["window_size"] = self.config_parsor.get("VAR","window_size")
+            Config.config["predict_size"] = self.config_parsor.get("VAR","predict_size")
+            Config.config["step_size"] = self.config_parsor.get("VAR","step_size")
 
     @staticmethod
     def get_config():
