@@ -2,6 +2,8 @@ import requests
 import json
 import src.crawler.graphql as graphql
 import src.config as config
+from loguru import logger
+logger.add("./log/{time}.log", level="DEBUG")
 
 def get_data(url, type: str = "vnd.github+json"):
     headers = {
