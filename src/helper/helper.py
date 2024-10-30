@@ -5,7 +5,9 @@ from loguru import logger
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(current_dir, f'../crawler'))
+sys.path.append(os.path.join(current_dir, f'../'))
 
+import config as config
 import graphql
 
 def get_all_commits(owner_name, repo_name):
@@ -44,7 +46,8 @@ def get_all_commits(owner_name, repo_name):
     }
     """
 
-    csv_file = f"./data/{owner_name}_{repo_name}.csv"
+
+    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}.csv"
 
     cursor = None
     commits = []
@@ -110,7 +113,7 @@ def get_all_commits(owner_name, repo_name):
     logger.info(f"write {len(commits)} commits to {csv_file}")
 
 def get_last_commit_date(owner_name, repo_name):
-    csv_file = f"./data/{owner_name}_{repo_name}.csv"
+    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}.csv"
 
     if not os.path.exists(csv_file):
         get_all_commits(owner_name, repo_name)
