@@ -15,6 +15,7 @@ if __name__ == "__main__":
     all = slice_all_commit_data("XS-MLVP", "env-xs-ov-00-bpu")
     print(len(all))
     for i in all:
+
         for j in i:
             print(j["committedDate"])
         print("=====================================")

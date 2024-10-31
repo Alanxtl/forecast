@@ -183,17 +183,17 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.C
         next_date = current_start_date + timedelta(days = step_days)
         next_ptr = current_ptr
 
-        while parse_datetime(commits[current_ptr]["committedDate"]) < current_end_date:
-            # print(commits[current_ptr]["committedDate"])
-            slice_commits.append(commits[current_ptr])
-            current_ptr -= 1
-            if current_ptr < 0:
-                break
+        while parse_datetime(commits[current_ptr]["committedDate"]) < current_end_date and current_ptr >= 0:
             if parse_datetime(commits[current_ptr]["committedDate"]) < next_date:
-                next_ptr = current_ptr
+                next_ptr = current_ptr - 1
+                # print("next =", next_ptr)
+
+            slice_commits.append(commits[current_ptr])
+
+            current_ptr -= 1
 
         slices.append(slice_commits)
-        current_dir = next_ptr
+        current_ptr = next_ptr
 
     return slices
 
