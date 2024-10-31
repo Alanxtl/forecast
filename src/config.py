@@ -21,4 +21,4 @@ class Config:
         return Config.config
 
 if __name__ == "__main__":
-    print(Config.get_config())
+    print(1)

@@ -12,45 +12,14 @@ sys.path.append(os.path.join(current_dir, f'../'))
 import config as config
 import graphql
 from .utils import parse_datetime
+from .query_templates import all_commits
 
 def get_all_commits(owner_name, repo_name):
     """获取指定仓库的所有提交信息并存储到 CSV 文件中."""
     # 初始查询模板
-    query_template = """
-    {
-        repository(owner: "%s", name: "%s") {
-            defaultBranchRef {
-                target {
-                    ... on Commit {
-                        history(first: 100%s) {
-                            edges {
-                                node {
-                                    author {
-                                        name
-                                        email
-                                    }
-                                    additions
-                                    deletions
-                                    changedFilesIfAvailable
-                                    committedDate
-                                    message
-                                    oid
-                                }
-                            }
-                            pageInfo {
-                                hasNextPage
-                                endCursor
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-    """
+    query_template = all_commits
 
-
-    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}.csv"
+    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     cursor = None
     commits = []
@@ -116,7 +85,7 @@ def get_all_commits(owner_name, repo_name):
     logger.info(f"write {len(commits)} commits to {csv_file}")
 
 def get_last_commit_date(owner_name, repo_name):
-    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}.csv"
+    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
         get_all_commits(owner_name, repo_name)
@@ -136,7 +105,7 @@ def get_last_commit_date(owner_name, repo_name):
             file.close()
 
 def get_m_months_data_given_start_date(owner_name, repo_name, start_date: datetime, m: int = int(config.Config.get_config()["window_size"])):
-    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}.csv"
+    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
         get_all_commits(owner_name, repo_name)
@@ -156,7 +125,7 @@ def get_m_months_data_given_start_date(owner_name, repo_name, start_date: dateti
             file.close()
 
 def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.Config.get_config()["window_size"]), step_length: int = int(config.Config.get_config()["step_size"])):
-    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}.csv"
+    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
         get_all_commits(owner_name, repo_name)

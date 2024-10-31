@@ -1,6 +1,6 @@
 import os
 from loguru import logger
-from src.helper.helper import *
+from src.helper.issues import *
 import src.config as config
 
 conf = config.Config.get_config()
@@ -12,10 +12,4 @@ if not os.path.exists(conf["log_path"]):
     os.mkdir(conf["log_path"])
 
 if __name__ == "__main__":
-    all = slice_all_commit_data("XS-MLVP", "env-xs-ov-00-bpu")
-    print(len(all))
-    for i in all:
-
-        for j in i:
-            print(j["committedDate"])
-        print("=====================================")
+    get_all_issues("apache", "hertzbeat")
