@@ -1,6 +1,6 @@
 import os
 from loguru import logger
-from src.helper.issues import *
+from src.crawler.issues import *
 import src.config as config
 
 conf = config.Config.get_config()

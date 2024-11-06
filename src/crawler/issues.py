@@ -6,12 +6,12 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(current_dir, f'../crawler'))
+sys.path.append(os.path.join(current_dir, f'../helper'))
 sys.path.append(os.path.join(current_dir, f'../'))
 
 import config as config
-import graphql
-from .utils import parse_datetime
+from .graphql import query
+from utils import parse_datetime
 from .query_templates import all_issues
 
 def get_all_issues(owner_name, repo_name):
@@ -34,7 +34,7 @@ def get_all_issues(owner_name, repo_name):
         query_string = query_template % (owner_name, repo_name, tem_cursor)
 
         # 执行查询
-        response = graphql.query(query_string)
+        response = query(query_string)
 
         # 解析响应
         edges = response["data"]["repository"]["issues"]["edges"]
