@@ -6,13 +6,14 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(current_dir, f'../helper'))
+sys.path.append(os.path.join(current_dir, f'../../../helper'))
+sys.path.append(os.path.join(current_dir, f'../../../'))
 sys.path.append(os.path.join(current_dir, f'../'))
 
 import config as config
-from .graphql import query
+from graphql import query
 from utils import parse_datetime
-from .query_templates import all_commits
+from query_templates import all_commits
 
 def get_all_commits(owner_name, repo_name):
     """获取指定仓库的所有提交信息并存储到 CSV 文件中."""
@@ -166,5 +167,30 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.C
 
     return slices
 
+def get_specific_developer_s_all_commit(owner_name, repo_name, name):
+    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+
+    if not os.path.exists(csv_file):
+        get_all_commits(owner_name, repo_name)
+
+    with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
+        try:
+            reader = csv.DictReader(file)
+            commits = list(reader)
+        finally:
+            file.close()
+
+    slices = []
+    total_commits = len(commits)
+
+    ret = 0
+
+    for i in commits: 
+        if i["author_name"] == name:
+            ret += 1
+
+
+    return ret
+
 if __name__ == "__main__":
-    print(get_last_commit_date("XS-MLVP", "env-xs-ov-00-bpu"))
+    print(get_last_commit_date("Alanxtl", "env-xs-ov-00-bpu", "Alanxtl"))

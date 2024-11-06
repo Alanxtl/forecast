@@ -6,13 +6,14 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(current_dir, f'../helper'))
+sys.path.append(os.path.join(current_dir, f'../../../helper'))
+sys.path.append(os.path.join(current_dir, f'../../../'))
 sys.path.append(os.path.join(current_dir, f'../'))
 
 import config as config
-from .graphql import query
+from graphql import query
 from utils import parse_datetime
-from .query_templates import all_issues
+from query_templates import all_issues
 
 def get_all_issues(owner_name, repo_name):
     """获取指定仓库的所有issue并存储到 CSV 文件中."""

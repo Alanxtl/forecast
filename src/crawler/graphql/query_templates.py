@@ -59,3 +59,26 @@ all_issues = """
   }
 }
 """
+
+developer_s_all_issues = """
+{
+  search(query: "author:%s", type: ISSUE, first: 100%s) {
+    edges {
+      node {
+        ... on PullRequest {
+          title
+          createdAt
+          number
+          repository {
+            nameWithOwner
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+"""
