@@ -1,4 +1,5 @@
 import datetime
+import time
 import sys
 import os
 import csv
@@ -11,7 +12,7 @@ sys.path.append(os.path.join(current_dir, f'../../../'))
 sys.path.append(os.path.join(current_dir, f'../'))
 
 import config as config
-from graphql import query
+from graphql import query_graphql
 from utils import parse_datetime
 from query_templates import all_commits
 
@@ -35,7 +36,7 @@ def get_all_commits(owner_name, repo_name):
         query_string = query_template % (owner_name, repo_name, tem_cursor)
 
         # 执行查询
-        response = query(query_string)
+        response = query_graphql(query_string)
 
         # 解析响应
         edges = response["data"]["repository"]["defaultBranchRef"]["target"]["history"]["edges"]
@@ -167,8 +168,20 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.C
 
     return slices
 
-def get_specific_developer_s_all_commit(owner_name, repo_name, name):
+def get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, name):
+
     csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+    target_csv_file = config.Config.get_config()["data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+
+    if os.path.exists(target_csv_file):
+        with open(target_csv_file, mode='r', newline='', encoding='utf-8') as file:
+            try:
+                reader = csv.DictReader(file)
+                commits = list(reader)
+            finally:
+                file.close()
+
+        return len(commits)
 
     if not os.path.exists(csv_file):
         get_all_commits(owner_name, repo_name)
@@ -180,17 +193,64 @@ def get_specific_developer_s_all_commit(owner_name, repo_name, name):
         finally:
             file.close()
 
-    slices = []
-    total_commits = len(commits)
-
     ret = 0
 
-    for i in commits: 
-        if i["author_name"] == name:
-            ret += 1
+    # 写入 CSV 文件
+    with open(target_csv_file, mode='w', newline='', encoding='utf-8') as file:
+        try:
+            writer = csv.DictWriter(file, fieldnames=["oid",
+                                                    "committedDate",
+                                                    "message",
+                                                    "author_name",
+                                                    "author_email",
+                                                    "additions",
+                                                    "deletions",
+                                                    "changedFilesIfAvailable",
+                                                    # "file"
+            ])
+            writer.writeheader()  # 写入表头
+            for i in commits: 
+                if i["author_name"] == name:
+                    ret += 1
+                    writer.writerow(i)  # 写入所有提交信息
+        finally:
+            file.close()
 
+    logger.info(f"write {ret} commits to {target_csv_file}")
 
     return ret
+
+def get_specific_developer_s_commit_on_specific_repo_from_to(owner_name, repo_name, name,
+                                                             start: str = "2000-01-01", 
+                                                             end: str = datetime.now().strftime('%Y-%m-%d')):
+    start_time = time.strptime(start, "%Y-%m-%d")
+    end_time = time.strptime(end, "%Y-%m-%d")
+
+    target_csv_file = config.Config.get_config()["data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+
+    if not os.path.exists(target_csv_file):
+        get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, name)
+        
+    with open(target_csv_file, mode='r', newline='', encoding='utf-8') as file:
+        count = 0
+
+        try:
+            reader = csv.DictReader(file)
+            commits = list(reader)
+            check = 1
+            for row in commits:
+                t = parse_datetime(row['committedDate'])
+                if t < end_time and t >= start_time:
+                    check = 2
+                    count += 1
+                elif check == 2:
+                    check == 3
+                if check == 3:
+                    break
+        finally:
+            file.close()
+
+        return count
 
 if __name__ == "__main__":
     print(get_last_commit_date("Alanxtl", "env-xs-ov-00-bpu", "Alanxtl"))

@@ -11,7 +11,7 @@ sys.path.append(os.path.join(current_dir, f'../../../'))
 sys.path.append(os.path.join(current_dir, f'../'))
 
 import config as config
-from graphql import query
+from graphql import query_graphql
 from utils import parse_datetime
 from query_templates import all_issues
 
@@ -35,7 +35,7 @@ def get_all_issues(owner_name, repo_name):
         query_string = query_template % (owner_name, repo_name, tem_cursor)
 
         # 执行查询
-        response = query(query_string)
+        response = query_graphql(query_string)
 
         # 解析响应
         edges = response["data"]["repository"]["issues"]["edges"]
