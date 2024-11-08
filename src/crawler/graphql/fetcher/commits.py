@@ -1,5 +1,4 @@
 import datetime
-import time
 import sys
 import os
 import csv
@@ -16,6 +15,8 @@ from graphql import query_graphql
 from utils import parse_datetime
 from query_templates import all_commits
 
+import csv
+
 def get_all_commits(owner_name, repo_name):
     """获取指定仓库的所有提交信息并存储到 CSV 文件中."""
     # 初始查询模板
@@ -25,6 +26,7 @@ def get_all_commits(owner_name, repo_name):
 
     cursor = None
     commits = []
+    loop = 0
 
     while True:
         # 构建查询
@@ -53,38 +55,51 @@ def get_all_commits(owner_name, repo_name):
                 "additions": commit["additions"],
                 "deletions": commit["deletions"],
                 "changedFilesIfAvailable": commit["changedFilesIfAvailable"],
-                # "file": commit["file"],
             })
 
         logger.debug(f"{csv_file} cursor at {cursor}")
+
         # 检查是否还有下一页
         if not page_info["hasNextPage"]:
             break
 
         # 更新游标进行下一次查询
         cursor = page_info["endCursor"]
+        loop += 1
 
+        # 每100次循环写入一次CSV文件
+        if loop % 10 == 0:
+            with open(csv_file, mode='a', newline='', encoding='utf-8') as file:
+                writer = csv.DictWriter(file, fieldnames=["oid",
+                                                           "committedDate",
+                                                           "message",
+                                                           "author_name",
+                                                           "author_email",
+                                                           "additions",
+                                                           "deletions",
+                                                           "changedFilesIfAvailable"])
+                if file.tell() == 0:  # 如果文件为空，则写入表头
+                    writer.writeheader()  
+                writer.writerows(commits)  # 写入当前的提交信息
+            logger.info(f"write {len(commits)} commits to {csv_file}")
+            commits.clear()  # 清空提交列表以释放内存
 
-
-    # 写入 CSV 文件
-    with open(csv_file, mode='w', newline='', encoding='utf-8') as file:
-        try:
+    # 写入剩余的提交信息
+    if commits:
+        with open(csv_file, mode='a', newline='', encoding='utf-8') as file:
             writer = csv.DictWriter(file, fieldnames=["oid",
-                                                    "committedDate",
-                                                    "message",
-                                                    "author_name",
-                                                    "author_email",
-                                                    "additions",
-                                                    "deletions",
-                                                    "changedFilesIfAvailable",
-                                                    # "file"
-            ])
-            writer.writeheader()  # 写入表头
-            writer.writerows(commits)  # 写入所有提交信息
-        finally:
-            file.close()
-
-    logger.info(f"write {len(commits)} commits to {csv_file}")
+                                                       "committedDate",
+                                                       "message",
+                                                       "author_name",
+                                                       "author_email",
+                                                       "additions",
+                                                       "deletions",
+                                                       "changedFilesIfAvailable"])
+            if file.tell() == 0:  # 如果文件为空，则写入表头
+                writer.writeheader()  
+            writer.writerows(commits)  # 写入剩余的提交信息
+            logger.info(f"write {len(commits)} commits to {csv_file}")
+            commits.clear()  # 清空提交列表以释放内存
 
 def get_last_commit_date(owner_name, repo_name):
     csv_file = config.Config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
@@ -168,6 +183,7 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.C
 
     return slices
 
+@DeprecationWarning
 def get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, name):
 
     csv_file = config.Config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
@@ -220,6 +236,7 @@ def get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, 
 
     return ret
 
+@DeprecationWarning
 def get_specific_developer_s_commit_on_specific_repo_from_to(owner_name, repo_name, name,
                                                              start: str = "2000-01-01", 
                                                              end: str = datetime.now().strftime('%Y-%m-%d')):
@@ -251,6 +268,17 @@ def get_specific_developer_s_commit_on_specific_repo_from_to(owner_name, repo_na
             file.close()
 
         return count
+
+def get_slice_data(slice) :
+    additions = 0
+    deletions = 0
+    modified_files = 0
+    for commit in slice:
+        additions += int(commit["additions"])
+        deletions += int(commit["deletions"])
+        modified_files += int(commit["changedFilesIfAvailable"])
+
+    return additions, deletions, modified_files
 
 if __name__ == "__main__":
     print(get_last_commit_date("Alanxtl", "env-xs-ov-00-bpu", "Alanxtl"))

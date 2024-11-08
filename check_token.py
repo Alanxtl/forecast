@@ -12,11 +12,12 @@ def check_token(file_path):
         
         # 检查 resources.graphql.remaining 字段
         remaining = data.get('resources', {}).get('graphql', {}).get('remaining')
+        core = data.get('resources', {}).get('core', {}).get('remaining')
         
         if remaining is None:
             print("--------------Token error, please check your token--------------")
         elif remaining > 1:
-            print("--------------Token valid--------------")
+            print("--------------Token valid, remaining {remaining}, {core}--------------".format(remaining=remaining, core=core))
         else:
             print("--------------Token expire, please check your token--------------")
 

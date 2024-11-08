@@ -23,8 +23,10 @@ def query_api(url: str): # A simple function to use requests.post to make the AP
     # print(url)
     if request.status_code == 200 or request.status_code == 304:
         return request.json()
+    if request.status_code == 409:
+        return []
     else:
-        raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query_graphql))
+        raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, url))
     
 def get_html(url):
     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0'
@@ -37,7 +39,6 @@ def get_html(url):
         return html.text # 返回网页内容
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(html.status_code, url))
-
 
 def get_rate_limit():
     """获取 GitHub API 的速率限制信息."""
@@ -54,4 +55,5 @@ def get_rate_limit():
 
 if __name__ == "__main__":
     rate_limit = get_rate_limit()
+
     print(rate_limit)

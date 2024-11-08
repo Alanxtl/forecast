@@ -1,8 +1,8 @@
-import time
+from datetime import datetime
 
-def parse_datetime(time_string) -> time.struct_time:
+def parse_datetime(time_string) -> datetime:
     try:
-        parsed_time = time.strptime(time_string, "%Y-%m-%dT%H:%M:%SZ")
+        parsed_time = datetime.strptime(time_string, "%Y-%m-%dT%H:%M:%SZ")
         return parsed_time
     except ValueError:
         raise ValueError("Incorrect time format, should be YYYY-MM-DDTHH:MM:SSZ")

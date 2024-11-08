@@ -1,11 +1,10 @@
 import ast
 import re
-import time
 import datetime
 import sys
 import os
 import csv
-from datetime import datetime, timedelta
+from datetime import datetime
 from loguru import logger
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -16,8 +15,6 @@ sys.path.append(os.path.join(current_dir, f'../'))
 import config as config
 from graphql import query_api, get_html
 from utils import parse_datetime
-from query_templates import developer_s_all_issues
-from .commits import get_specific_developer_s_commit_on_specific_repo_from_to
 
 def get_developer_s_all_repos(name): 
     """获取某人所有的 repo"""
@@ -114,8 +111,8 @@ def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
 def get_developer_s_all_commits_on_specific_repo_ranging_from_to(owner_name, repo_name, name,
                                                                  start: str = '2000-01-01', 
                                                                  end: str = datetime.now().strftime('%Y-%m-%d')):
-    start_time = time.strptime(start, "%Y-%m-%d")
-    end_time = time.strptime(end, "%Y-%m-%d")
+    start_time = datetime.strptime(start, "%Y-%m-%d")
+    end_time = datetime.strptime(end, "%Y-%m-%d")
 
     csv_file = config.Config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 

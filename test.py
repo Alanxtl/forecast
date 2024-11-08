@@ -1,7 +1,6 @@
 import os
-import time
 from loguru import logger
-from src.crawler.graphql.fetcher.developer import *
+from src.crawler.graphql.fetcher.commits import *
 import src.config as config
 
 conf = config.Config.get_config()
@@ -13,5 +12,7 @@ if not os.path.exists(conf["log_path"]):
     os.mkdir(conf["log_path"])
 
 if __name__ == "__main__":
-    i = calc_developers_focuse_rate_on_repo("Alanxtl", "forecast", "Alanxtl", "2024-10-01")
-    print(i)
+    i = slice_all_commit_data("apache", "hertzbeat")
+    for j in i:
+        print(j[0]["committedDate"], get_slice_data(j), j[-1]["committedDate"])
+    # print(i)
