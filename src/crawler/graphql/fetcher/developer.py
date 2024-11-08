@@ -21,7 +21,7 @@ from .commits import get_specific_developer_s_commit_on_specific_repo_from_to
 
 def get_developer_s_all_repos(name): 
     """获取某人所有的 repo"""
-    file = config.Config.get_config()["data_path"] + f"/{name}_s_all_repos.txt"
+    file = config.Config.get_config()["raw_data_path"] + f"/{name}_s_all_repos.txt"
 
     if os.path.exists(file):
         with open(file, mode='r', newline='', encoding='utf-8') as file:
@@ -64,7 +64,7 @@ def get_developer_s_commits_on_all_repos(name):
     return sum
 
 def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
-    csv_file = config.Config.get_config()["data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+    csv_file = config.Config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if os.path.exists(csv_file):
         with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
@@ -117,7 +117,7 @@ def get_developer_s_all_commits_on_specific_repo_ranging_from_to(owner_name, rep
     start_time = time.strptime(start, "%Y-%m-%d")
     end_time = time.strptime(end, "%Y-%m-%d")
 
-    csv_file = config.Config.get_config()["data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+    csv_file = config.Config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if not os.path.exists(csv_file):
         get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name)

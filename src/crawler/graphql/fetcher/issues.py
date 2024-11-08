@@ -20,7 +20,7 @@ def get_all_issues(owner_name, repo_name):
     # 初始查询模板
     query_template = all_issues
 
-    csv_file = config.Config.get_config()["data_path"] + f"/{owner_name}_{repo_name}_issues.csv"
+    csv_file = config.Config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_issues.csv"
 
     cursor = None
     issues = []

@@ -12,3 +12,7 @@ run:
 clean:
 	@echo "Cleaning log directory..."
 	@find ./logs -type f | sort | head -n -1 | xargs rm -f
+
+cleanrawdata:
+	@echo "Cleaning data directory..."
+	@find ./data/raw -type f | xargs rm -rf
