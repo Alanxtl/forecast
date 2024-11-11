@@ -8,3 +8,4 @@
 ## Credits
 
 - Seeno (https://umm.js.org/p/5c5365ec/)
+- HelgeCPH/truckfactor (https://github.com/HelgeCPH/truckfactor)
