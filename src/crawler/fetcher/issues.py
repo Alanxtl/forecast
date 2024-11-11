@@ -1,26 +1,18 @@
-import datetime
-import sys
-import os
 import csv
 from datetime import datetime, timedelta
 from loguru import logger
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(current_dir, f'../../../helper'))
-sys.path.append(os.path.join(current_dir, f'../../../'))
-sys.path.append(os.path.join(current_dir, f'../'))
-
-import config as config
-from graphql import query_graphql
-from utils import parse_datetime
-from query_templates import all_issues
+from src.config import Config as config
+from src.crawler.query_templates import all_issues
+from src.crawler.graphql import query_graphql
+from src.utils.datetime_parser import parse_datetime
 
 def get_all_issues(owner_name, repo_name):
     """获取指定仓库的所有issue并存储到 CSV 文件中."""
     # 初始查询模板
     query_template = all_issues
 
-    csv_file = config.Config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_issues.csv"
+    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_issues.csv"
 
     cursor = None
     issues = []

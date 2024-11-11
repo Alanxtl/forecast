@@ -1,9 +1,10 @@
 import os
 from loguru import logger
-from src.crawler.graphql.fetcher.commits import *
-import src.config as config
 
-conf = config.Config.get_config()
+from src.crawler.fetcher.commits import *
+from src.config import Config as config
+
+conf = config.get_config()
 logger.add(conf["log_path"] + "/{time}.log", level="DEBUG")
 
 if not os.path.exists(conf["data_path"]):

@@ -1,9 +1,7 @@
 all: clean test run
 
 test:
-	@echo $$(python src/crawler/graphql/graphql.py) > output.json; \
-	python check_token.py output.json
-	@rm output.json > /dev/null
+	python check_token.py
 
 run:
 	@echo "Running the program..."

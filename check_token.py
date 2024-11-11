@@ -1,14 +1,12 @@
 import json
 import sys
 
+from src.crawler.graphql import get_rate_limit
+
 def check_token(file_path):
-    try:
-        # 读取 JSON 文件
-        with open(file_path, 'r') as f:
-            output = f.read()
-        
+    try:        
         # 将输出转换为字典
-        data = json.loads(output.replace("'", '"'))  # 将单引号转换为双引号
+        data = file_path
         
         # 检查 resources.graphql.remaining 字段
         remaining = data.get('resources', {}).get('graphql', {}).get('remaining')
@@ -27,7 +25,4 @@ def check_token(file_path):
         print(f"An unexpected error occurred: {e}")
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python check_token.py <output_file>")
-    else:
-        check_token(sys.argv[1])
+    check_token(get_rate_limit())

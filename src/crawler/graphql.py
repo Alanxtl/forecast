@@ -1,13 +1,8 @@
 import requests
-import sys
-import os
-from loguru import logger
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(current_dir, f'../../'))
-import config as config
+from src.config import Config as config
 
-headers = {"Authorization": config.Config.get_config()["token"], 
+headers = {"Authorization": config.get_config()["token"], 
            "Accept": "application/vnd.github+json",
            "X-GitHub-Api-Version": "2022-11-28"}
 
