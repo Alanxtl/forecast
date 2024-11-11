@@ -50,5 +50,3 @@ def get_rate_limit():
 
 if __name__ == "__main__":
     rate_limit = get_rate_limit()
-
-    print(rate_limit)
