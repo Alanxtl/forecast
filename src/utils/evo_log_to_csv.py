@@ -1,16 +1,15 @@
 """
-This file is written by HelgeCPH (https://github.com/HelgeCPH/truckfactor)
+The original file is written by HelgeCPH (https://github.com/HelgeCPH/truckfactor)
 """
 
-import os
 import re
-import sys
-import tempfile
+from loguru import logger
+
+from src.config import Config as config
 
 LINE_RE = r"(-|\d+)+\s+(-|\d+)+\s+(.*)"
 RENAME_RE = r"\{(.*) => (.*)\}"
 RENAME2_RE = r"(.*) => (.*)"
-
 
 def parse_numstat_block(commit_line, block):
     if block:
@@ -30,7 +29,7 @@ def parse_numstat_block(commit_line, block):
         yield csv_line
 
 
-def convert(report_file):
+def convert(owner_name, repo_name, report_file):
     try:
         # In some rare cases UTF-8 characters, such as `ø` cannot be decoded
         # correctly. Even though, the `file` tool reports the log file as utf-8
@@ -53,7 +52,7 @@ def convert(report_file):
             next_line = lines[idx + 1].rstrip()
         else:
             next_line = ""
-        if (line.startswith('\'') and next_line.startswith('\'')) or (line.startswith('"') and next_line.startswith('"')):
+        if line.startswith('"') and next_line.startswith('"'):
             # Next line is a commit too and they where no changes...
             commit_block.append(line)
             commit_blocks.append(commit_block[:])
@@ -64,18 +63,19 @@ def convert(report_file):
             else:
                 commit_blocks.append(commit_block[:])
                 commit_block = []
-    out_file = f"{report_file}.csv"
-    out_path = os.path.join(tempfile.gettempdir(), out_file)
+    # out_file = f"{report_file}.csv"
+    # out_path = os.path.join(tempfile.gettempdir(), out_file)
+    out_path = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+
+    count = 0
     with open(out_path, "w", encoding="utf-8") as fp:
-        fp.write("hash,author,date,added,removed,fname\n")
+        fp.write("hash,author_name,author_email,date,message,added,removed,fname\n")
         for block in commit_blocks:
             commit_line = block[0]
             for csv_line in parse_numstat_block(commit_line, block[1:]):
                 fp.write(csv_line + "\n")
+                count += 1
 
-    print(out_path)
+    logger.info(f"write {count} commits to {out_path}")
+
     return out_path
-
-
-if __name__ == "__main__":
-    convert(sys.argv[1])

@@ -6,14 +6,14 @@ headers = {"Authorization": config.get_config()["token"],
            "Accept": "application/vnd.github+json",
            "X-GitHub-Api-Version": "2022-11-28"}
 
-def query_graphql(query): # A simple function to use requests.post to make the API call. Note the json= section.
+def query_graphql(query):
     request = requests.post('https://api.github.com/graphql', json={'query': query}, headers=headers)
     if request.status_code == 200:
         return request.json()
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
     
-def query_api(url: str): # A simple function to use requests.post to make the API call. Note the json= section.
+def query_api(url: str):
     request = requests.get(url, headers=headers)
     # print(url)
     if request.status_code == 200 or request.status_code == 304:

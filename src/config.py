@@ -7,6 +7,7 @@ class Config:
         self.config_parsor = configparser.ConfigParser()
         with open(f"./config.ini","r") as file_object:
             self.config_parsor.read_file(file_object)
+            Config.config["data_path"] = self.config_parsor.get("DEFAULT","data_path")
             Config.config["raw_data_path"] = self.config_parsor.get("DEFAULT","raw_data_path")
             Config.config["predict_data_path"] = self.config_parsor.get("DEFAULT","predict_data_path")
             Config.config["log_path"] = self.config_parsor.get("DEFAULT","log_path")

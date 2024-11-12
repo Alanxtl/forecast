@@ -1,5 +1,5 @@
 """
-This file is written by HelgeCPH (https://github.com/HelgeCPH/truckfactor)
+The original file is written by HelgeCPH (https://github.com/HelgeCPH/truckfactor)
 
 This program computes the truck factor (also called bus factor) for a given 
 Git repository.
@@ -25,53 +25,15 @@ Options:
   --version     Show version.
   --output=<kind>  Kind of output, either csv or verbose.
 """
-import csv
-import os
-import subprocess
-import sys
+
 import tempfile
-import uuid
-from pathlib import Path
-from shutil import rmtree, which
-from urllib.parse import urlparse
 
 import pandas as pd
-from docopt import docopt
 
-from src.crawler.evo_log_to_csv import convert
-from src.crawler.repair_git_move import repair
+from src.utils.git_funcs import clone_to_tmp, is_git_url
+from src.crawler.fetcher.commits import preprocess_git_log_data
 
 TMP = tempfile.gettempdir()
-
-
-def write_git_log_to_file(path_to_repo, commit_sha=None):
-    p = Path(path_to_repo)
-    outfile = os.path.join(TMP, p.name + "_evo.log")
-
-    if not commit_sha:
-        commit_sha = get_head_commit_sha(path_to_repo)
-    cmd = f"""git -C {path_to_repo} log {commit_sha} \
-    --pretty=format:'"%h","%an","%ad"' \
-    --date=short \
-    --numstat > \
-    {outfile}"""
-
-    subprocess.run(cmd, shell=True)
-
-    return outfile
-
-
-def preprocess_git_log_data(path_to_repo, commit_sha=None):
-    evo_log = write_git_log_to_file(path_to_repo, commit_sha=commit_sha)
-    evo_log_csv = convert(evo_log)
-    try:
-        evo_log_csv = repair(evo_log_csv)
-    except ValueError:
-        msg = "Seems to be an empty repository." + " Cannot compute truck factor for it.\n"
-        sys.stderr.write(msg)
-        sys.exit(1)
-    return evo_log_csv
-
 
 def create_file_owner_data(df):
     """Currently, we count up how many lines each author added per file.
@@ -85,7 +47,7 @@ def create_file_owner_data(df):
 
     for fname in set(df.current.values):
         view = df[df.current == fname]
-        sum_series = view.groupby(["author"]).added.sum()
+        sum_series = view.groupby(["author_name"]).added.sum()
         view_df = sum_series.reset_index(name="sum_added")
         total_added = view_df.sum_added.sum()
 
@@ -95,7 +57,7 @@ def create_file_owner_data(df):
             new_rows.append(
                 (
                     fname,
-                    owning_author.author,
+                    owning_author.author_name,
                     owning_author.sum_added,
                     total_added,
                     owning_author.owning_percent,
@@ -114,7 +76,6 @@ def create_file_owner_data(df):
 
     return owner_df, owner_freq_df
 
-
 def compute_truck_factor(df, freq_df):
     """Similar to G. Avelino et al.
     [*A novel approach for estimating Truck Factors*](https://ieeexplore.ieee.org/stamp)/stamp.jsp?arnumber=7503718)
@@ -125,6 +86,9 @@ def compute_truck_factor(df, freq_df):
     no_artifacts = len(df.artifact)
     half_no_artifacts = no_artifacts // 2
     count = 0
+
+    if no_artifacts == 0:
+        return 0, freq_df
 
     for idx, (owner, freq) in enumerate(freq_df.values):
         no_artifacts -= freq
@@ -137,121 +101,31 @@ def compute_truck_factor(df, freq_df):
     truckfactor = len(freq_df.main_dev) - count
     return truckfactor, freq_df.iloc[idx:].main_dev
 
-
-def main(path_to_repo, is_url=False, commit_sha=None, ouputkind="human"):
-    path_to_repo_url = path_to_repo
-    if is_url:
-        path_to_repo = clone_to_tmp(path_to_repo)
-    evo_log_csv = preprocess_git_log_data(path_to_repo, commit_sha=commit_sha)
+def compute(owner_name, repo_name, end_commit_sha = None, start_commit_sha = None):
+    evo_log_csv = preprocess_git_log_data(owner_name, repo_name)
     complete_df = pd.read_csv(evo_log_csv)
+
+    first_occurrence_index = -1
+    end_occurrence_index = complete_df.index.max()
+
+    if not start_commit_sha is None:
+        first_occurrence_index = complete_df[complete_df['hash'] == start_commit_sha].index.max()
+    
+        if pd.isna(first_occurrence_index):
+            raise ValueError(f"commit_sha {start_commit_sha} not found in the log data.")
+
+            
+    if end_commit_sha is not None:
+        end_occurrence_index = complete_df[complete_df['hash'] == end_commit_sha].index.max()
+         
+        if pd.isna(end_occurrence_index):
+            raise ValueError(f"commit_sha {end_commit_sha} not found in the log data.")
+
+
+    # 保留从 start_commit_sha 到 end_commit_sha 的行
+    complete_df = complete_df.iloc[first_occurrence_index + 1:end_occurrence_index + 1]
+
     owner_df, owner_freq_df = create_file_owner_data(complete_df)
     truckfactor, authors = compute_truck_factor(owner_df, owner_freq_df)
 
-    if is_url:
-        if commit_sha is None:
-            commit_sha = get_head_commit_sha(path_to_repo)
-        create_ouput(path_to_repo_url, commit_sha, truckfactor, authors, kind=ouputkind)
-        rmtree(path_to_repo, ignore_errors=True)
-    else:
-        create_ouput(path_to_repo, commit_sha, truckfactor, authors, kind=ouputkind)
-    return truckfactor, commit_sha, list(authors.values)
-
-
-def git_is_available():
-    """Check whether `git` is on PATH"""
-    if which("git"):
-        return True
-    else:
-        return False
-
-
-def is_git_url(potential_url):
-    result = urlparse(potential_url)
-    is_complete_url = all((result.scheme, result.netloc, result.path))
-    is_git = result.path.endswith(".git")
-    is_git_user = result.path.startswith("git@")
-    if is_complete_url:
-        return True
-    elif is_git_user and is_git:
-        return True
-    else:
-        return False
-
-
-def is_git_dir(potential_repo_path):
-    if not Path(potential_repo_path).is_dir():
-        return False
-    cmd = f"git -C {potential_repo_path} rev-parse --is-inside-work-tree"
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    return result.stdout.strip() == "true"
-
-
-def clone_to_tmp(url):
-    path = Path(urlparse(url).path)
-    outdir = path.name.removesuffix(path.suffix)
-    git_repo_dir = os.path.join(TMP, outdir + str(uuid.uuid4()))
-    cmd = f"git clone {url} {git_repo_dir}"
-    print(cmd)
-    subprocess.run(cmd, shell=True)
-
-    return git_repo_dir
-
-
-def get_head_commit_sha(path_to_repo):
-    cmd = f"git -C {path_to_repo} rev-parse HEAD"
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-    commit_sha = result.stdout.strip()
-
-    return commit_sha
-
-
-def create_ouput(path_to_repo, commit_sha, truckfactor, authors, kind="human"):
-    if not commit_sha:
-        commit_sha = get_head_commit_sha(path_to_repo)
-
-    authors_str = ", ".join(authors)
-    if kind == "human":
-        msg = f"The truck factor of {path_to_repo} ({commit_sha}) is:" + f" {truckfactor}"
-        print(msg)
-        msg = f"with author(s): {authors_str}"
-        print(msg)
-    elif kind == "csv":
-        csv_writer = csv.writer(sys.stdout)
-        csv_writer.writerow((path_to_repo, commit_sha, truckfactor, authors_str))
-    elif kind == "verbose":
-        print(f"Repository: {path_to_repo}")
-        print(f"Commit: {commit_sha}")
-        print(f"Truckfactor: {truckfactor}")
-        print(f"Authors: {authors_str}")
-
-
-def run():
-    if not git_is_available():
-        print("Truckfactor requires `git` to be installed and accessible on PATH")
-        sys.exit(1)
-
-    arguments = docopt(__doc__)
-
-    commit_sha = arguments["<commit_sha>"]
-    path_to_repo = arguments["<repository>"]
-    if not arguments["--output"]:
-        output = "human"
-    else:
-        output = arguments["--output"].lower()
-        if not output in ["csv", "verbose", "human"]:
-            print(__doc__)
-            sys.exit(1)
-    if is_git_url(path_to_repo) or is_git_dir(path_to_repo):
-        truckfactor, _, _ = main(
-            path_to_repo,
-            is_url=is_git_url(path_to_repo),
-            commit_sha=commit_sha,
-            ouputkind=output,
-        )
-    else:
-        print(__doc__)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    run()
+    return truckfactor, list(authors.values), start_commit_sha

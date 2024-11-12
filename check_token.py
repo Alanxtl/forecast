@@ -1,7 +1,6 @@
 import json
-import sys
 
-from src.crawler.graphql import get_rate_limit
+from src.utils.graphql import get_rate_limit
 
 def check_token(file_path):
     try:        

@@ -2,15 +2,22 @@ import os
 import csv
 from datetime import datetime, timedelta
 from loguru import logger
+from pathlib import Path
+import tempfile
+import subprocess
 
 from src.config import Config as config
-from src.crawler.query_templates import all_commits
-from src.crawler.graphql import query_graphql
+from src.utils.graphql import query_graphql
 from src.utils.datetime_parser import parse_datetime
+from src.utils.evo_log_to_csv import convert
+from src.utils.repair_git_move import repair
+from src.utils.git_funcs import clone_to_tmp
 
-import csv
+TMP = tempfile.gettempdir()
 
+@DeprecationWarning
 def get_all_commits(owner_name, repo_name):
+    from src.utils.query_templates import all_commits
     """获取指定仓库的所有提交信息并存储到 CSV 文件中."""
     # 初始查询模板
     query_template = all_commits
@@ -94,11 +101,50 @@ def get_all_commits(owner_name, repo_name):
             logger.info(f"write {len(commits)} commits to {csv_file}")
             commits.clear()  # 清空提交列表以释放内存
 
+def get_head_commit_sha(path_to_repo):
+    cmd = f"git -C {path_to_repo} rev-parse HEAD"
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    commit_sha = result.stdout.strip()
+
+    return commit_sha
+
+def write_git_log_to_file(owner_name, repo_name):
+    path_to_repo = r"https://github.com/" + f"{owner_name}/{repo_name}" + r".git"
+    
+    p = Path(clone_to_tmp(path_to_repo))
+
+    outfile = os.path.join(TMP, p.name + "_evo.log")
+
+    cmd = (
+        f"git -C {p} log"
+        r'--pretty=format:"\"%H\",\"%an\",\"%ae\",\"%aI\",\"%f\"" '
+        f"--date=short --numstat > {outfile}"
+    )
+
+    subprocess.run(cmd, shell=True)
+
+    return outfile
+    
+def preprocess_git_log_data(owner_name, repo_name):
+    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits_repaired.csv"
+
+    if os.path.exists(csv_file):
+        return csv_file
+
+    evo_log = write_git_log_to_file(owner_name, repo_name)
+    evo_log_csv = convert(owner_name, repo_name, evo_log)
+    try:
+        evo_log_csv = repair(evo_log_csv)
+    except ValueError:
+        msg = "Seems to be an empty repository." + " Cannot compute truck factor for it.\n"
+
+    return evo_log_csv
+
 def get_last_commit_date(owner_name, repo_name):
     csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
-        get_all_commits(owner_name, repo_name)
+        preprocess_git_log_data(owner_name, repo_name)
 
     with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
         try:
@@ -118,7 +164,7 @@ def get_m_months_data_given_start_date(owner_name, repo_name, start_date: dateti
     csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
-        get_all_commits(owner_name, repo_name)
+        preprocess_git_log_data(owner_name, repo_name)
 
     with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
         try:
@@ -138,7 +184,7 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.g
     csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
-        get_all_commits(owner_name, repo_name)
+        preprocess_git_log_data(owner_name, repo_name)
 
     with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
         try:

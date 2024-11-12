@@ -1,5 +1,5 @@
 """
-This file is written by HelgeCPH (https://github.com/HelgeCPH/truckfactor)
+The original file is written by HelgeCPH (https://github.com/HelgeCPH/truckfactor)
 """
 
 import csv
@@ -7,6 +7,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 
 def _deconstruct_git_move(fname):
@@ -132,6 +133,8 @@ def repair(log_csv_name):
 
     out_path = log_csv_name.replace(".csv", "_repaired.csv")
     df.to_csv(out_path, index=False, quoting=csv.QUOTE_ALL)
+
+    logger.info(f"repair commits to {out_path}")
 
     return out_path
 

@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 from loguru import logger
 
 from src.config import Config as config
-from src.crawler.query_templates import all_issues
-from src.crawler.graphql import query_graphql
+from src.utils.query_templates import all_issues
+from src.utils.graphql import query_graphql
 from src.utils.datetime_parser import parse_datetime
 
 def get_all_issues(owner_name, repo_name):

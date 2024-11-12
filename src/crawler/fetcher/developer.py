@@ -6,7 +6,7 @@ from datetime import datetime
 from loguru import logger
 
 from src.config import Config as config
-from src.crawler.graphql import query_api
+from src.utils.graphql import query_api
 from src.utils.datetime_parser import parse_datetime
 
 def get_developer_s_all_repos(name): 

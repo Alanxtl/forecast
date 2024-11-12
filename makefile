@@ -1,8 +1,18 @@
-all: clean test run
+GIT := $(shell command -v git)
 
-test:
-	python check_token.py
+check: check-git check-token
+all: clean check run
 
+check-token:
+	@python check_token.py
+
+check-git:
+	@if [ -x "$(GIT)" ]; then \
+		echo "git installed, located in: $(GIT)"; \
+	else \
+		echo "git command not found, please install git first"; \
+		exit 1; \
+	fi
 run:
 	@echo "Running the program..."
 	@python ./test.py
