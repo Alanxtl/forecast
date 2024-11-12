@@ -131,12 +131,11 @@ def repair(log_csv_name):
             final_currents.append(_get_current_for(row.fname))
     df.current = final_currents
 
-    out_path = log_csv_name.replace(".csv", "_repaired.csv")
-    df.to_csv(out_path, index=False, quoting=csv.QUOTE_ALL)
+    df.to_csv(log_csv_name, index=False, quoting=csv.QUOTE_ALL)
 
-    logger.info(f"repair commits to {out_path}")
+    logger.info(f"repair commits to {log_csv_name}")
 
-    return out_path
+    return log_csv_name
 
 
 if __name__ == "__main__":

@@ -116,7 +116,7 @@ def write_git_log_to_file(owner_name, repo_name):
     outfile = os.path.join(TMP, p.name + "_evo.log")
 
     cmd = (
-        f"git -C {p} log"
+        f"git -C {p} log "
         r'--pretty=format:"\"%H\",\"%an\",\"%ae\",\"%aI\",\"%f\"" '
         f"--date=short --numstat > {outfile}"
     )
@@ -126,7 +126,7 @@ def write_git_log_to_file(owner_name, repo_name):
     return outfile
     
 def preprocess_git_log_data(owner_name, repo_name):
-    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits_repaired.csv"
+    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if os.path.exists(csv_file):
         return csv_file
@@ -194,6 +194,7 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.g
             file.close()
 
     slices = []
+    slice_rules = []
     total_commits = len(commits)
     window_days = window_size * 30
     step_days = step_length * 30
@@ -203,13 +204,13 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.g
 
     while current_ptr >= 0:
         slice_commits = []
-        current_start_date = parse_datetime(commits[current_ptr]["committedDate"])
+        current_start_date = parse_datetime(commits[current_ptr]["date"])
         current_end_date = current_start_date + timedelta(days = window_days)
         next_date = current_start_date + timedelta(days = step_days)
         next_ptr = current_ptr
 
-        while parse_datetime(commits[current_ptr]["committedDate"]) < current_end_date and current_ptr >= 0:
-            if parse_datetime(commits[current_ptr]["committedDate"]) < next_date:
+        while parse_datetime(commits[current_ptr]["date"]) < current_end_date and current_ptr >= 0:
+            if parse_datetime(commits[current_ptr]["date"]) < next_date:
                 next_ptr = current_ptr - 1
                 # print("next =", next_ptr)
 
@@ -218,9 +219,10 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.g
             current_ptr -= 1
 
         slices.append(slice_commits)
+        slice_rules.append([current_start_date, current_end_date])
         current_ptr = next_ptr
 
-    return slices
+    return slices, slice_rules
 
 @DeprecationWarning
 def get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, name):
@@ -320,4 +322,5 @@ def get_slice_data(slice) :
     return additions, deletions, modified_files
 
 if __name__ == "__main__":
-    print(get_last_commit_date("Alanxtl", "env-xs-ov-00-bpu"))
+    _, rules = slice_all_commit_data("Alanxtl", "env-xs-ov-00-bpu")
+    print(get_last_commit_date("Alanxtl", "env-xs-ov-00-bpu", rules))

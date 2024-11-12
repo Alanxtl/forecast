@@ -2,6 +2,7 @@ import os
 from loguru import logger
 
 from src.crawler.fetcher.commits import *
+from src.crawler.fetcher.issues import *
 from src.crawler.truck_factor.compute import compute
 from src.config import Config as config
 
@@ -19,7 +20,9 @@ if not os.path.exists(conf["log_path"]):
 
 if __name__ == "__main__":
     print("main: ")
-    print(compute("Alanxtl", "QT-mychat", None, "94d1d320932287b8751059a98a970c62a46df473"))
+    a, rules = slice_all_commit_data("apache", "hertzbeat")
+
+    print(get_sliced_issues("apache", "hertzbeat", rules))
 
 
 # ab3f51d883d0c0909bc92a31e599bea3e69a8c06

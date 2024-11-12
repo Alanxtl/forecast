@@ -1,5 +1,8 @@
 import csv
 from datetime import datetime, timedelta
+import os
+import pandas as pd
+import ast
 from loguru import logger
 
 from src.config import Config as config
@@ -13,6 +16,9 @@ def get_all_issues(owner_name, repo_name):
     query_template = all_issues
 
     csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_issues.csv"
+
+    if os.path.exists(csv_file):
+        return csv_file
 
     cursor = None
     issues = []
@@ -68,3 +74,33 @@ def get_all_issues(owner_name, repo_name):
             file.close()
 
     logger.info(f"write {len(issues)} issues to {csv_file}")
+
+    return csv_file
+
+def get_sliced_issues(owner_name, repo_name, slice_rules):
+    # 读取 CSV 文件
+    df = pd.read_csv(get_all_issues(owner_name, repo_name))
+
+    # 转换 createdAt 和 closedAt 列
+    df['createdAt'] = df['createdAt'].apply(parse_datetime)
+    df['closedAt'] = df['closedAt'].apply(lambda x: None if pd.isna(x) else parse_datetime(x))
+
+    # 转换 issue_labels 列为列表
+    df['issue_labels'] = df['issue_labels'].apply(lambda x: ast.literal_eval(x))
+
+    # 转换 issue_label_count 列为整数
+    df['issue_label_count'] = df['issue_label_count'].astype(int)
+    
+    # 存储每个切片的数量
+    created_counts = []
+    
+    for start_date, end_date in slice_rules:
+        count = df[(df['createdAt'] >= start_date) & (df['createdAt'] < end_date)].shape[0]
+        created_counts.append(count)
+
+    # 存储每个切片的数量
+    close_counts = []
+    
+    for start_date, end_date in slice_rules:
+        count = df[(df['closedAt'] >= start_date) & (df['closedAt'] < end_date)].shape[0]
+        close_counts.append(count)
