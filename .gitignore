@@ -2,6 +2,7 @@ config.ini
 pyrightconfig.json
 data/
 log/
+.vscode/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
