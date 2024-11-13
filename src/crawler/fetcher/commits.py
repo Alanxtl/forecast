@@ -1,10 +1,11 @@
 import os
 import csv
-from datetime import datetime, timedelta
-from loguru import logger
-from pathlib import Path
 import tempfile
 import subprocess
+from pathlib import Path
+
+from datetime import datetime, timedelta
+from loguru import logger
 
 from src.config import Config as config
 from src.utils.graphql import query_graphql
@@ -81,7 +82,7 @@ def get_all_commits(owner_name, repo_name):
                 if file.tell() == 0:  # 如果文件为空，则写入表头
                     writer.writeheader()  
                 writer.writerows(commits)  # 写入当前的提交信息
-            logger.info(f"write {len(commits)} commits to {csv_file}")
+            logger.info(f"Write {len(commits)} commits to {csv_file}")
             commits.clear()  # 清空提交列表以释放内存
 
     # 写入剩余的提交信息
@@ -98,7 +99,7 @@ def get_all_commits(owner_name, repo_name):
             if file.tell() == 0:  # 如果文件为空，则写入表头
                 writer.writeheader()  
             writer.writerows(commits)  # 写入剩余的提交信息
-            logger.info(f"write {len(commits)} commits to {csv_file}")
+            logger.info(f"Write {len(commits)} commits to {csv_file}")
             commits.clear()  # 清空提交列表以释放内存
 
 def get_head_commit_sha(path_to_repo):
@@ -273,7 +274,7 @@ def get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, 
         finally:
             file.close()
 
-    logger.info(f"write {ret} commits to {target_csv_file}")
+    logger.info(f"Write {ret} commits to {target_csv_file}")
 
     return ret
 
@@ -320,7 +321,3 @@ def get_slice_data(slice) :
         modified_files += int(commit["changedFilesIfAvailable"])
 
     return additions, deletions, modified_files
-
-if __name__ == "__main__":
-    _, rules = slice_all_commit_data("Alanxtl", "env-xs-ov-00-bpu")
-    print(get_last_commit_date("Alanxtl", "env-xs-ov-00-bpu", rules))

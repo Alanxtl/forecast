@@ -76,6 +76,6 @@ def convert(owner_name, repo_name, report_file):
                 fp.write(csv_line + "\n")
                 count += 1
 
-    logger.info(f"write {count} commits to {out_path}")
+    logger.info(f"Write {count} commits to {out_path}")
 
     return out_path

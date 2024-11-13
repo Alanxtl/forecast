@@ -21,6 +21,3 @@ class Config:
         if ( len(Config.config) < 1 ):
             Config()
         return Config.config
-
-if __name__ == "__main__":
-    print(1)

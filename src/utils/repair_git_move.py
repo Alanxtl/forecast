@@ -2,13 +2,13 @@
 The original file is written by HelgeCPH (https://github.com/HelgeCPH/truckfactor)
 """
 
-import csv
 import sys
 
 import numpy as np
 import pandas as pd
 from loguru import logger
 
+from src.utils.datetime_parser import parse_datetime
 
 def _deconstruct_git_move(fname):
     if "=>" in fname:
@@ -66,7 +66,11 @@ def _get_current_for(new_name):
 
 
 def repair(log_csv_name):
-    df = pd.read_csv(log_csv_name, parse_dates=["date"], na_values=["-"])
+    df = pd.read_csv(log_csv_name, parse_dates=["date"], na_values=["-", "", "\"-\""])
+    df["added"] = df["added"].fillna("0").astype(int)
+    df["removed"] = df["removed"].fillna("0").astype(int)
+    # df["date"] = df["date"].apply(parse_datetime)
+
     df["current"] = df.fname
 
     # Commits can be empty, so filter out the commits that do not affect files:
@@ -131,12 +135,37 @@ def repair(log_csv_name):
             final_currents.append(_get_current_for(row.fname))
     df.current = final_currents
 
-    df.to_csv(log_csv_name, index=False, quoting=csv.QUOTE_ALL)
+    df['file_count'] = 0
 
-    logger.info(f"repair commits to {log_csv_name}")
+    # # 在合并之前，确保处理 NaN 值并转换为字符串
+    # df['fname'] = df['fname'].fillna('-').astype(str)
+    # df['current'] = df['current'].fillna('-').astype(str)
+    # df['old'] = df['old'].fillna('-').astype(str)
+    # df['new'] = df['new'].fillna('-').astype(str)
+
+    # 进行分组，基于 'hash' 字段
+    df = df.groupby('hash').agg({
+        'added': 'sum',                 # 将 'added' 字段求和
+        'removed': 'sum',               # 将 'removed' 字段求和
+        'fname': lambda x: list(x.dropna()),  # 合并 'fname' 字段为列表，去除 NaN
+        'current': lambda x: list(x.dropna()), # 合并 'current' 字段为列表，去除 NaN
+        'old': lambda x: list(x.dropna()),      # 合并 'old' 字段为列表，去除 NaN
+        'new': lambda x: list(x.dropna()),      # 合并 'new' 字段为列表，去除 NaN
+        'author_name': 'first',         # 保留第一个 author_name
+        'author_email': 'first',        # 保留第一个 author_email
+        'date': 'first',                # 保留第一个 date
+        'message': 'first',             # 保留第一个 message
+        'file_count': 'size'            # 计算每组的行数
+    }).reset_index()
+
+    # 根据 date 字段排序
+    df = df.sort_values(by='date', ascending=False)
+
+    df.to_csv(log_csv_name)
+
+    logger.info(f"Repair {log_csv_name}")
 
     return log_csv_name
-
 
 if __name__ == "__main__":
     repair(sys.argv[1])

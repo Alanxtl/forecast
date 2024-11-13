@@ -3,6 +3,7 @@ import datetime
 import os
 import csv
 from datetime import datetime
+
 from loguru import logger
 
 from src.config import Config as config

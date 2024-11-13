@@ -7,8 +7,8 @@ import subprocess
 import uuid
 import tempfile
 from pathlib import Path
-from shutil import rmtree, which
 from urllib.parse import urlparse
+
 from loguru import logger
 
 TMP = tempfile.gettempdir()

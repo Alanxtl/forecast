@@ -1,8 +1,8 @@
 import csv
-from datetime import datetime, timedelta
 import os
-import pandas as pd
 import ast
+
+import pandas as pd
 from loguru import logger
 
 from src.config import Config as config
@@ -73,7 +73,7 @@ def get_all_issues(owner_name, repo_name):
         finally:
             file.close()
 
-    logger.info(f"write {len(issues)} issues to {csv_file}")
+    logger.info(f"Write {len(issues)} issues to {csv_file}")
 
     return csv_file
 
@@ -93,10 +93,14 @@ def get_sliced_issues(owner_name, repo_name, slice_rules):
     
     # 存储每个切片的数量
     created_counts = []
+    lable_counts = []
     
     for start_date, end_date in slice_rules:
-        count = df[(df['createdAt'] >= start_date) & (df['createdAt'] < end_date)].shape[0]
+        filter = df[(df['createdAt'] >= start_date) & (df['createdAt'] < end_date)]
+        count = filter.shape[0]
+        lable = filter['issue_label_count'].sum()
         created_counts.append(count)
+        lable_counts.append(int(lable))
 
     # 存储每个切片的数量
     close_counts = []
@@ -104,3 +108,5 @@ def get_sliced_issues(owner_name, repo_name, slice_rules):
     for start_date, end_date in slice_rules:
         count = df[(df['closedAt'] >= start_date) & (df['closedAt'] < end_date)].shape[0]
         close_counts.append(count)
+
+    return created_counts, close_counts, lable_counts
