@@ -3,6 +3,7 @@ from loguru import logger
 
 from src.crawler.fetcher.commits import preprocess_git_log_data, slice_all_commit_data
 from src.crawler.fetcher.issues import get_all_issues, get_sliced_issues
+from src.crawler.fetcher.star import get_sliced_stars
 
 class repo:
 
@@ -53,6 +54,11 @@ class repo:
                                             if not len(self.sliced_commits[j]) == 0 else 0)
                                             for j in range(len(self.sliced_commits))]
         
+        self.added_star_count: list
+        """新增的 star 数"""
+
+        self.added_star_count = get_sliced_stars(owner_name, repo_name, self.slice_rules)
+
         for i in str(self).split("\n"):
             logger.info(i)
 
@@ -70,8 +76,28 @@ class repo:
         str += "removed_code_line ([n]): %s" % self.removed_code_line + "\n"
         # str += "modefied_file_count ([n]): %s" % self.modefied_file_count + "\n"
         str += "modefied_file_count_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.modefied_file_count_on_ave) + ']' + "\n"
+        str += "added_star_count ([n]): %s" % self.added_star_count + "\n"
 
         return str
 
     def get_data(self):
         pass
+
+    def get_summary(self):
+        return {
+            "Owner/Repo": f"{self.owner_name}/{self.repo_name}",
+            "All Commits": len(self.all_commits),
+            "Slice Rules": len(self.slice_rules),
+            "Sliced Commits": [len(i) for i in self.sliced_commits],
+            "All Issues": len(self.all_issues),
+            "Created Issues": self.created_issues,
+            "Closed Issues": self.closed_issues,
+            "Label Counts on Average": [f"{num:.2f}" for num in self.lable_counts_on_ave],
+            "Added Code Lines": self.added_code_line,
+            "Removed Code Lines": self.removed_code_line,
+            "Modified File Count on Average": [f"{num:.2f}" for num in self.modefied_file_count_on_ave],
+            "Added Star Count": self.added_star_count
+        }
+    
+def create_repo(owner_name, repo_name, progress_bar) -> repo:
+    return repo(owner_name, repo_name)

@@ -23,6 +23,19 @@ def query_api(url: str):
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, url))
     
+query_star_headers = {"Authorization": config.get_config()["token"], 
+           "Accept": "application/vnd.github.v3.star+json"}
+
+def query_star(url: str):
+    request = requests.get(url, headers=query_star_headers)
+    # print(url)
+    if request.status_code == 200 or request.status_code == 304:
+        return [i["starred_at"] for i in request.json()]
+    if request.status_code == 409:
+        return []
+    else:
+        raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, url))
+    
 def get_html(url):
     user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0'
     
