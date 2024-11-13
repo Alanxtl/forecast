@@ -65,11 +65,11 @@ class repo:
         str += "created_issues ([n]): %s" % self.created_issues + "\n"
         str += "closed_issues ([n]): %s" % self.closed_issues + "\n"
         # str += "lable_counts_in_total (n): %s" % self.lable_counts_in_total + "\n"
-        str += "lable_counts_on_ave ([n]): %s" % self.lable_counts_on_ave + "\n"
+        str += "lable_counts_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.lable_counts_on_ave) + ']' + "\n"
         str += "added_code_line ([n]): %s" % self.added_code_line + "\n"
         str += "removed_code_line ([n]): %s" % self.removed_code_line + "\n"
         # str += "modefied_file_count ([n]): %s" % self.modefied_file_count + "\n"
-        str += "modefied_file_count_on_ave ([n]): %s" % self.modefied_file_count_on_ave + "\n"
+        str += "modefied_file_count_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.modefied_file_count_on_ave) + ']' + "\n"
 
         return str
 
