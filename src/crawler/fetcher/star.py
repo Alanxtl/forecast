@@ -1,6 +1,5 @@
-import datetime
+from concurrent.futures import ThreadPoolExecutor
 import os
-from datetime import datetime
 import threading
 
 import pandas as pd
@@ -22,69 +21,35 @@ def get_repo_s_all_stars(owner_name, repo_name) -> pd.DataFrame:
     csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_s_stars.csv"
 
     if os.path.exists(csv_file):
-        with open(csv_file, mode='r', newline='', encoding='utf-8') as csv_file:
-            try:
-                complete_df = pd.read_csv(csv_file)
-            finally:
-                csv_file.close()
-
-            return complete_df
+        return pd.read_csv(csv_file)
 
     rets = []
     lock = threading.Lock()
-    condition = threading.Condition()
     page = 1
-    thread_count = 0
     last = lastPage(owner_name, repo_name)
 
-    def worker():
-        nonlocal page, rets, thread_count, last
-
-        with condition:
-            current_page = page
-            page += 10
-
-            if current_page > last:
-                thread_count -= 1
-                condition.notify_all()
-                return
-
+    def worker(current_page):
+        nonlocal rets
         for i in range(current_page, min(last, current_page + 10)):
-            quert_url = 'https://api.github.com/repos/%s/%s/stargazers?per_page=100&page=%d' % (owner_name, repo_name, i)
+            query_url = f'https://api.github.com/repos/{owner_name}/{repo_name}/stargazers?per_page=100&page={i}'
+            logger.debug(f"{csv_file} cursor at {i}")
             try:
-                response = query_star(quert_url)
+                response = query_star(query_url)
+                with lock:
+                    rets.extend([parse_datetime(item) for item in response])
             except Exception as e:
                 logger.error(f"Error querying page {i}: {e}")
-                continue
-            with lock:
-                rets.extend([parse_datetime(i) for i in response])
-                logger.debug(f"{csv_file} cursor at {i}")
 
-        with condition:
-            thread_count -= 1
-            condition.notify_all()
-            return 
-        
-    while True:
-        t = threading.Thread(target=worker)
-        t.start()
-        thread_count += 1
-        if thread_count >= 6:
-            with condition:
-                condition.wait()
-        if page >= last - 1:
-            break
-
-    # 等待所有线程完成
-    while thread_count > 0:
-        with condition:
-            condition.wait()
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        while page <= last:
+            executor.submit(worker, page)
+            page += 10
 
     # 写入 CSV 文件
     df = pd.DataFrame(rets, columns=["starred_at"])
     df.to_csv(csv_file, index=False, encoding='utf-8')
 
-    logger.info(f"Write {len(rets)} commits to {csv_file}")
+    logger.info(f"Write {len(rets)} stars to {csv_file}")
 
     return df
 

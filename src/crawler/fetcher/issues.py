@@ -41,14 +41,14 @@ def get_all_issues(owner_name, repo_name):
 
         for edge in edges:
             issue = edge["node"]
-            issues.append({
-                "title": issue["title"],
-                "issue_labels": [i["node"]["name"] for i in issue["labels"]["edges"]],
-                "issue_label_count": issue["labels"]["totalCount"],
-                "createdAt": issue["createdAt"],
-                "closedAt": issue["closedAt"],
-                "state": issue["state"],
-            })
+            issues.append([
+                issue["title"],
+                [i["node"]["name"] for i in issue["labels"]["edges"]],
+                issue["labels"]["totalCount"],
+                issue["createdAt"],
+                issue["closedAt"],
+                issue["state"],
+            ])
 
         logger.debug(f"{csv_file} cursor at {cursor}")
         # 检查是否还有下一页
@@ -58,21 +58,15 @@ def get_all_issues(owner_name, repo_name):
         # 更新游标进行下一次查询
         cursor = page_info["endCursor"]
 
-    # 写入 CSV 文件
-    with open(csv_file, mode='w', newline='', encoding='utf-8') as file:
-        try:
-            writer = csv.DictWriter(file, fieldnames=["title",
-                                                    "issue_labels",
-                                                    "issue_label_count",
-                                                    "createdAt",
-                                                    "closedAt",
-                                                    "state",
-            ])
-            writer.writeheader()  # 写入表头
-            writer.writerows(issues)  # 写入所有提交信息
-        finally:
-            file.close()
+    df = pd.DataFrame(issues, columns=["title",
+                                       "issue_labels",
+                                       "issue_label_count",
+                                       "createdAt",
+                                       "closedAt",
+                                       "state"])
 
+    # 写入 CSV 文件
+    df.to_csv(csv_file, index=False, encoding='utf-8')
     logger.info(f"Write {len(issues)} issues to {csv_file}")
 
     return csv_file

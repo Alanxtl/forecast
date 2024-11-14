@@ -3,217 +3,265 @@ import time
 
 import streamlit as st
 from streamlit_echarts import st_echarts
-import pandas as pd
 from loguru import logger
 
-from src.dataset import create_repo, repo as Repo
+from src.dataset import repo as Repo
+from src.config import Config as config
 
-# Streamlit UI
+conf = config.get_config()
+logger.add(conf["log_path"] + "/{time}.log", level="DEBUG")
+
 st.title("Repository Data Explorer")
 
 owner_name = st.text_input("Enter the Owner Name:")
 repo_name = st.text_input("Enter the Repository Name:")
 
+# 创建一个字典来存储数据
+data = {
+    "basic_data": None,
+    "commit_data": None,
+    "issue_data": None,
+    "code_data": None,
+}
+
+def fetch_da1(repo):
+    data["basic_data"] = repo.get_repo_basic_data()
+
+def fetch_data_0(repo):
+    data["commit_data"] = repo.get_commit_data()
+
+def fetch_data_1(repo):
+    data["issue_data"] = repo.get_issue_data()
+
+def fetch_data_2(repo):
+    data["code_data"] = repo.get_code_data()
+
+
 if st.button("Fetch Data"):
     if owner_name and repo_name:
-        progress_bar = st.progress(0)  # 创建进度条
+        state = 0
+        progress_bar = st.progress(state)  # 创建进度条
         status_text = st.empty()  # 用于显示状态文本
 
-        # 创建一个线程来执行 Repo 实例创建
-        thread = threading.Thread(target=create_repo, args=(owner_name, repo_name, progress_bar.progress))
-        thread.start()
+        state += 5     
+        progress_bar.progress(state)
 
-        while thread.is_alive():
-            status_text.text("Fetching data... Please wait.")
-            time.sleep(0.1)  # 每 0.1 秒检查一次线程状态
+        # 创建 Repo 实例
+        repo = Repo(owner_name, repo_name)
 
-        # 等待线程结束
-        thread.join()
+        # 创建线程来并行加载数据
+        thread1 = threading.Thread(target=fetch_da1, args=(repo, ))
+        thread3 = threading.Thread(target=fetch_data_1, args=(repo, ))
+        thread4 = threading.Thread(target=fetch_data_2, args=(repo, ))
 
-        progress_bar.empty()  # 清空进度条
-        status_text.empty()  # 清空状态文本
-            
-        try:
-            repo = Repo(owner_name, repo_name)
-            summary = repo.get_summary()
+        status_text.text("Fetching data... Please wait.")
 
-            with st.expander("Repository Summary", expanded=False):
-                for key, value in summary.items():
-                    st.write(f"**{key}:** {value}")
+        fetch_data_0(repo)
 
-            # 获得切片规则和数据
-            slice_rules = repo.slice_rules
-            sliced_commits = repo.sliced_commits
+        slice_starts = [str(rule[0].date()) + "~" + str(rule[1].date()) for rule in repo.slice_rules]
+        state += 20
+        progress_bar.progress(state)
 
-            slice_starts = [str(rule[0].date()) + "~" + str(rule[1].date()) for rule in slice_rules]
+        # 图表0
+        options0 = {
+            "title": {"text": "Commit Data"},
+            "tooltip": {"trigger": "axis"},
+            "legend": {"data": ["Commits", "Modified File Count on Average"]},
+            "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
+            "toolbox": {"feature": {"saveAsImage": {}}},
+            "xAxis": {
+                "type": "category",
+                "boundaryGap": False,
+                "data": slice_starts,
+            },
+            "yAxis": [
+                {
+                    "type": "value",
+                    "name": "Commits (n)",  # 主纵坐标名称
+                    "position": "left",
+                },
+                {
+                    "type": "value",
+                    "name": "Files (n)",  # 副纵坐标名称
+                    "position": "right",
+                    "offset": 0,  # 调整位置
+                },
+            ],
+            "series": [
+                {
+                    "name": "Commits",
+                    "type": "line",
+                    "data": data["commit_data"][0],
+                    "yAxisIndex": 0,  # 使用主纵坐标
+                },
+                {
+                    "name": "Modified File Count on Average",
+                    "type": "line",
+                    "data": data["commit_data"][1],
+                    "yAxisIndex": 1,  # 使用副纵坐标
+                }
+            ],
+        }
+
+        # 绘制线图
+        st_echarts(options=options0, height="400px", key="Commit_Data")
+
+        # 绘制线图
+
+        thread1.start()
+        thread3.start()
+        thread4.start()
+
+        lock = threading.Lock()
+        fu1 = True
+        tu1 = True
+        tu2 = True
+
+        while fu1 or tu1 or tu2:
+            time.sleep(0.1)
 
             # 图表-1
-            opt1 = {
-                "title": {"text": "Repo Basic Data"},
-                "tooltip": {"trigger": "axis"},
-                "legend": {"data": ["Commits", "Modified File Count on Average"]},
-                "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
-                "toolbox": {"feature": {"saveAsImage": {}}},
-                "xAxis": {
-                    "type": "category",
-                    "boundaryGap": False,
-                    "data": slice_starts,
-                },
-                "yAxis": [
-                    {
-                        "type": "value",
-                        "name": "Stars (n)",  # 主纵坐标名称
-                        "position": "left",
+            if not thread1.is_alive() and fu1:
+                state += 25
+                progress_bar.progress(state)
+                opt1 = {
+                    "title": {"text": "Repo Basic Data"},
+                    "tooltip": {"trigger": "axis"},
+                    "legend": {"data": ["Commits", "Modified File Count on Average"]},
+                    "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
+                    "toolbox": {"feature": {"saveAsImage": {}}},
+                    "xAxis": {
+                        "type": "category",
+                        "boundaryGap": False,
+                        "data": slice_starts,
                     },
-                ],
-                "series": [
-                    {
-                        "name": "Stars",
-                        "type": "line",
-                        "data": repo.added_star_count,
-                        "yAxisIndex": 0,  # 使用主纵坐标
-                    },
-                ],
-            }
+                    "yAxis": [
+                        {
+                            "type": "value",
+                            "name": "Stars (n)",  # 主纵坐标名称
+                            "position": "left",
+                        },
+                    ],
+                    "series": [
+                        {
+                            "name": "Stars",
+                            "type": "line",
+                            "data": data["basic_data"],
+                            "yAxisIndex": 0,  # 使用主纵坐标
+                        },
+                    ],
+                }
 
-            # 绘制线图
-            st_echarts(options=opt1, height="400px")
-
-            # 图表0
-            options0 = {
-                "title": {"text": "Commit Data"},
-                "tooltip": {"trigger": "axis"},
-                "legend": {"data": ["Commits", "Modified File Count on Average"]},
-                "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
-                "toolbox": {"feature": {"saveAsImage": {}}},
-                "xAxis": {
-                    "type": "category",
-                    "boundaryGap": False,
-                    "data": slice_starts,
-                },
-                "yAxis": [
-                    {
-                        "type": "value",
-                        "name": "Commits (n)",  # 主纵坐标名称
-                        "position": "left",
-                    },
-                    {
-                        "type": "value",
-                        "name": "Files (n)",  # 副纵坐标名称
-                        "position": "right",
-                        "offset": 0,  # 调整位置
-                    },
-                ],
-                "series": [
-                    {
-                        "name": "Commits",
-                        "type": "line",
-                        "data": [len(commits) for commits in repo.sliced_commits],
-                        "yAxisIndex": 0,  # 使用主纵坐标
-                    },
-                    {
-                        "name": "Modified File Count on Average",
-                        "type": "line",
-                        "data": repo.modefied_file_count_on_ave,
-                        "yAxisIndex": 1,  # 使用副纵坐标
-                    }
-                ],
-            }
-
-            # 绘制线图
-            st_echarts(options=options0, height="400px")
+                st_echarts(options=opt1, height="400px", key="Repo_Basic_Data")
+                with lock:
+                    fu1 = False
 
             # 图表1
-            options1 = {
-                "title": {"text": "Issue Data"},
-                "tooltip": {"trigger": "axis"},
-                "legend": {"data": ["Created Issues", "Closed Issues", "Issue Label Counts on Average"]},
-                "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
-                "toolbox": {"feature": {"saveAsImage": {}}},
-                "xAxis": {
-                    "type": "category",
-                    "boundaryGap": False,
-                    "data": slice_starts,
-                },
-                "yAxis": [
-                    {
-                        "type": "value",
-                        "name": "Issues (n)",  # 主纵坐标名称
-                        "position": "left",
+            if not thread3.is_alive() and tu1:
+                state += 25
+                progress_bar.progress(state)
+                options1 = {
+                    "title": {"text": "Issue Data"},
+                    "tooltip": {"trigger": "axis"},
+                    "legend": {"data": ["Created Issues", "Closed Issues", "Issue Label Counts on Average"]},
+                    "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
+                    "toolbox": {"feature": {"saveAsImage": {}}},
+                    "xAxis": {
+                        "type": "category",
+                        "boundaryGap": False,
+                        "data": slice_starts,
                     },
-                    {
-                        "type": "value",
-                        "name": "Labels (n)",  # 副纵坐标名称
-                        "position": "right",
-                        "offset": 0,  # 调整位置
-                    },
-                ],
-                "series": [
-                    {
-                        "name": "Created Issues",
-                        "type": "line",
-                        "data": repo.created_issues,
-                        "yAxisIndex": 0,  # 使用主纵坐标
-                    },
-                    {
-                        "name": "Closed Issues",
-                        "type": "line",
-                        "data": repo.closed_issues,
-                        "yAxisIndex": 0,  # 使用主纵坐标
-                    },
-                    {
-                        "name": "Issue Label Counts on Average",
-                        "type": "line",
-                        "data": repo.lable_counts_on_ave,  # 修正拼写错误
-                        "yAxisIndex": 1,  # 使用副纵坐标
-                    },
-                ],
-            }
+                    "yAxis": [
+                        {
+                            "type": "value",
+                            "name": "Issues (n)",  # 主纵坐标名称
+                            "position": "left",
+                        },
+                        {
+                            "type": "value",
+                            "name": "Labels (n)",  # 副纵坐标名称
+                            "position": "right",
+                            "offset": 0,  # 调整位置
+                        },
+                    ],
+                    "series": [
+                        {
+                            "name": "Created Issues",
+                            "type": "line",
+                            "data": data["issue_data"][0],
+                            "yAxisIndex": 0,  # 使用主纵坐标
+                        },
+                        {
+                            "name": "Closed Issues",
+                            "type": "line",
+                            "data": data["issue_data"][1],
+                            "yAxisIndex": 0,  # 使用主纵坐标
+                        },
+                        {
+                            "name": "Issue Label Counts on Average",
+                            "type": "line",
+                            "data": data["issue_data"][2],
+                            "yAxisIndex": 1,  # 使用副纵坐标
+                        },
+                    ],
+                }
 
-            # 绘制线图
-            st_echarts(options=options1, height="400px")
+                st_echarts(options=options1, height="400px", key="Issue_Data")
+                with lock:
+                    tu1 = False
 
             # 表2
-            options2 = {
-                "title": {"text": "Code Data"},
-                "tooltip": {"trigger": "axis"},
-                "legend": {"data": ["Added Code Line", "Removed Code Line"]},
-                "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
-                "toolbox": {"feature": {"saveAsImage": {}}},
-                "xAxis": {
-                    "type": "category",
-                    "boundaryGap": False,
-                    "data": slice_starts,
-                },
-                "yAxis": {"type": "value"},
-                "yAxis": [
-                    {
+            if not thread3.is_alive() and tu2:
+                state += 25
+                progress_bar.progress(state)
+                options2 = {
+                    "title": {"text": "Code Data"},
+                    "tooltip": {"trigger": "axis"},
+                    "legend": {"data": ["Added Code Line", "Removed Code Line"]},
+                    "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
+                    "toolbox": {"feature": {"saveAsImage": {}}},
+                    "xAxis": {
+                        "type": "category",
+                        "boundaryGap": False,
+                        "data": slice_starts,
+                    },
+                    "yAxis": {
                         "type": "value",
                         "name": "Lines (n)",  # 主纵坐标名称
                         "position": "left",
                     },
-                ],
-                "series": [
-                    {
-                        "name": "Added Code Line",
-                        "type": "line",
-                        "data": repo.added_code_line,
-                        "yAxisIndex": 0,
-                    },
-                    {
-                        "name": "Removed Code Line",
-                        "type": "line",
-                        "data": repo.removed_code_line,
-                        "yAxisIndex": 0,
-                    },
-                ],
-            }
+                    "series": [
+                        {
+                            "name": "Added Code Line",
+                            "type": "line",
+                            "data": data["code_data"][0],
+                            "yAxisIndex": 0,
+                        },
+                        {
+                            "name": "Removed Code Line",
+                            "type": "line",
+                            "data": data["code_data"][1],
+                            "yAxisIndex": 0,
+                        },
+                    ],
+                }
 
-            # 绘制线图
-            st_echarts(options=options2, height="400px")
+                # 绘制线图
+                st_echarts(options=options2, height="400px", key="Code_Data")
+                with lock:
+                    tu2 = False
+
+        thread1.join()
+        thread3.join()
+        thread4.join()
+
+        progress_bar.empty()  # 清空进度条
+        status_text.empty()  # 清空状态文本
+
+        with st.expander("Repository Summary", expanded=False):
+            for key, value in repo.get_summary().items():
+                st.write(f"**{key}:** {value}")
 
 
-        except Exception as e:
-            st.error(f"Error fetching data: {e}")
     else:
         st.warning("Please enter both Owner Name and Repository Name.")

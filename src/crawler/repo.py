@@ -23,11 +23,11 @@ def get_repo_s_info(owner_name, repo_name) -> dict:
     url_repos = f'https://api.github.com/repos/{owner_name}/{repo_name}'
     json_data = query_api(url_repos)
 
-    with open(file, mode='w', newline='', encoding='utf-8') as file:
+    with open(file, mode='w', newline='', encoding='utf-8') as f:
         try:
-            file.write(str(json_data))
+            f.write(str(json_data))
         finally:
-            file.close()
+            f.close()
 
     logger.info(f"Get {owner_name}/{repo_name}'s info, write to {file}")
 

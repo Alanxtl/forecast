@@ -11,56 +11,86 @@ class repo:
         self.owner_name = owner_name
         self.repo_name = repo_name
 
-        self.all_commits: pd.DataFrame
+        self.all_commits = None
         """所有的commit"""
-        self.sliced_commits: list
+        self.sliced_commits: list = []
         """新增的commit数量"""
-        self.slice_rules: list
+        self.slice_rules: list = []
         """时间切片方法"""
 
-        self.all_commits = pd.read_csv(preprocess_git_log_data(owner_name, repo_name))
-        self.sliced_commits, self.slice_rules = slice_all_commit_data(owner_name, repo_name)
-
-        self.all_issues: pd.DataFrame
+        self.all_issues = None
         """所有的issue"""
-        self.created_issues: list
+        self.created_issues: list = []
         """新增issue数量"""
-        self.closed_issues: list
+        self.closed_issues: list = []
         """Closed issue数量"""
-        self.lable_counts_in_total: list
+        self.lable_counts_in_total: list = []
         """issue Labels 种类总和"""
-        self.lable_counts_on_ave: list
+        self.lable_counts_on_ave: list = []
         """issue Labels 平均种类"""
 
-        self.all_issues = pd.read_csv(get_all_issues(owner_name, repo_name))
-        self.created_issues, self.closed_issues, self.lable_counts_in_total = get_sliced_issues(owner_name, repo_name, self.slice_rules)
-        self.lable_counts_on_ave = [(self.lable_counts_in_total[j] / self.created_issues[j] 
-                                         if not self.created_issues[j] == 0 else 0) 
-                                         for j in range(len(self.created_issues))]
-
-        self.added_code_line: list
+        self.added_code_line: list = []
         """新增的代码行数"""
-        self.removed_code_line: list
+        self.removed_code_line: list = []
         """删除的代码行数"""
-        self.modefied_file_count_in_total: list
+        self.modefied_file_count_in_total: list = []
         """修改的模块数量总和"""
-        self.modefied_file_count_on_ave: list
+        self.modefied_file_count_on_ave: list = []
         """修改的模块数量平均"""
 
-        self.added_code_line = [sum(int(commit["added"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
-        self.removed_code_line = [sum(int(commit["removed"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
-        self.modefied_file_count = [sum(int(commit["file_count"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
-        self.modefied_file_count_on_ave = [(self.modefied_file_count[j] / len(self.sliced_commits[j])
-                                            if not len(self.sliced_commits[j]) == 0 else 0)
-                                            for j in range(len(self.sliced_commits))]
-        
-        self.added_star_count: list
+        self.added_star_count: list = []
         """新增的 star 数"""
 
-        self.added_star_count = get_sliced_stars(owner_name, repo_name, self.slice_rules)
+    def get_repo_basic_data(self):
+        """表-1的数据: star 数"""
+        if self.added_star_count == []:
+            self.added_star_count = get_sliced_stars(self.owner_name, self.repo_name, self.slice_rules)
 
-        for i in str(self).split("\n"):
-            logger.info(i)
+        return self.added_star_count
+    
+    def get_commit_data(self):
+        """表0的数据: commit 数 和 修改的文件数
+        这个函数必须第一个执行并且不能并行"""
+
+        if self.all_commits is None:
+            self.all_commits = pd.read_csv(preprocess_git_log_data(self.owner_name, self.repo_name))
+        if self.sliced_commits == []:
+            self.sliced_commits, self.slice_rules = slice_all_commit_data(self.owner_name, self.repo_name)
+        if self.modefied_file_count_in_total == []:
+            self.modefied_file_count_in_total = [sum(int(commit["file_count"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
+        if self.modefied_file_count_on_ave == []:
+            self.modefied_file_count_on_ave = [(self.modefied_file_count_in_total[j] / len(self.sliced_commits[j])
+                                            if not len(self.sliced_commits[j]) == 0 else 0)
+                                            for j in range(len(self.sliced_commits))]
+            
+        return [len(commits) for commits in self.sliced_commits], self.modefied_file_count_on_ave
+            
+    def get_issue_data(self):
+        """表1的数据: 新建的 issue 数、关闭的 issue 数 和 issue label 数"""
+        if self.all_issues is None:
+            self.all_issues = pd.read_csv(get_all_issues(self.owner_name, self.repo_name))
+        if self.created_issues == []:
+            self.created_issues, self.closed_issues, self.lable_counts_in_total = get_sliced_issues(self.owner_name, self.repo_name, self.slice_rules)
+        if self.lable_counts_on_ave == []:
+            self.lable_counts_on_ave = [(self.lable_counts_in_total[j] / self.created_issues[j] 
+                                         if not self.created_issues[j] == 0 else 0) 
+                                         for j in range(len(self.created_issues))]
+            
+        return self.created_issues, self.closed_issues, self.lable_counts_on_ave
+
+    def get_code_data(self):
+        """表2的数据: 新增的代码行数、删除的代码行数 和 修改的模块数"""
+
+        if self.added_code_line == []:
+            self.added_code_line = [sum(int(commit["added"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
+        if self.removed_code_line == []:
+            self.removed_code_line = [sum(int(commit["removed"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
+        
+        return self.added_code_line, self.removed_code_line, self.modefied_file_count_on_ave
+
+
+
+
 
     def __str__(self) -> str:
         str = "%s/%s\n" % (self.owner_name, self.repo_name)
