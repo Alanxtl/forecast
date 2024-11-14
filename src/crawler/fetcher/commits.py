@@ -15,6 +15,7 @@ from src.utils.repair_git_move import repair
 from src.utils.git_funcs import clone_to_tmp
 
 TMP = tempfile.gettempdir()
+conf = config.get_config()
 
 @DeprecationWarning
 def get_all_commits(owner_name, repo_name):
@@ -23,7 +24,7 @@ def get_all_commits(owner_name, repo_name):
     # 初始查询模板
     query_template = all_commits
 
-    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+    csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     cursor = None
     commits = []
@@ -127,7 +128,7 @@ def write_git_log_to_file(owner_name, repo_name):
     return outfile
     
 def preprocess_git_log_data(owner_name, repo_name):
-    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+    csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if os.path.exists(csv_file):
         return csv_file
@@ -142,7 +143,7 @@ def preprocess_git_log_data(owner_name, repo_name):
     return evo_log_csv
 
 def get_last_commit_date(owner_name, repo_name):
-    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+    csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
         preprocess_git_log_data(owner_name, repo_name)
@@ -161,8 +162,8 @@ def get_last_commit_date(owner_name, repo_name):
         finally:
             file.close()
 
-def get_m_months_data_given_start_date(owner_name, repo_name, start_date: datetime, m: int = int(config.get_config()["window_size"])):
-    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+def get_m_months_data_given_start_date(owner_name, repo_name, start_date: datetime, m: int = conf["window_size"]):
+    csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
         preprocess_git_log_data(owner_name, repo_name)
@@ -181,8 +182,8 @@ def get_m_months_data_given_start_date(owner_name, repo_name, start_date: dateti
         finally:
             file.close()
 
-def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.get_config()["window_size"]), step_length: int = int(config.get_config()["step_size"])):
-    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+def slice_all_commit_data(owner_name, repo_name, window_size: int = conf["window_size"], step_length: int = conf["step_size"]):
+    csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
         preprocess_git_log_data(owner_name, repo_name)
@@ -228,8 +229,8 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = int(config.g
 @DeprecationWarning
 def get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, name):
 
-    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
-    target_csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+    csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+    target_csv_file = conf["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if os.path.exists(target_csv_file):
         with open(target_csv_file, mode='r', newline='', encoding='utf-8') as file:
@@ -242,7 +243,7 @@ def get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, 
         return len(commits)
 
     if not os.path.exists(csv_file):
-        get_all_commits(owner_name, repo_name)
+        preprocess_git_log_data(owner_name, repo_name)
 
     with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
         try:
@@ -285,7 +286,7 @@ def get_specific_developer_s_commit_on_specific_repo_from_to(owner_name, repo_na
     start_time = datetime.strptime(start, "%Y-%m-%d")
     end_time = datetime.strptime(end, "%Y-%m-%d")
 
-    target_csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+    target_csv_file = conf["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if not os.path.exists(target_csv_file):
         get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, name)

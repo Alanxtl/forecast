@@ -12,12 +12,18 @@ class Config:
             Config.config["predict_data_path"] = self.config_parsor.get("DEFAULT","predict_data_path")
             Config.config["log_path"] = self.config_parsor.get("DEFAULT","log_path")
             Config.config["token"] = self.config_parsor.get("token","token")
-            Config.config["window_size"] = self.config_parsor.get("VAR","window_size")
-            Config.config["predict_size"] = self.config_parsor.get("VAR","predict_size")
-            Config.config["step_size"] = self.config_parsor.get("VAR","step_size")
+            Config.config["window_size"] = int(self.config_parsor.get("VAR","window_size"))
+            Config.config["predict_size"] = int(self.config_parsor.get("VAR","predict_size"))
+            Config.config["step_size"] = int(self.config_parsor.get("VAR","step_size"))
 
     @staticmethod
     def get_config():
         if ( len(Config.config) < 1 ):
             Config()
         return Config.config
+
+    @staticmethod
+    def set_size(window_size, step_size, predict_size):
+        Config.config["window_size"] = window_size
+        Config.config["step_size"] = step_size
+        Config.config["predict_size"] = predict_size

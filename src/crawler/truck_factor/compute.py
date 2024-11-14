@@ -13,17 +13,6 @@ Note, do not call it from within a Git repository.
 More on the truck factor:
   * https://en.wikipedia.org/wiki/Bus_factor
   * https://legacy.python.org/search/hypermail/python-1994q2/1040.html
-
-
-Usage:
-  truckfactor <repository> [<commit_sha>] [--output=<kind>]
-  truckfactor -h | --help
-  truckfactor --version
-
-Options:
-  -h --help     Show this screen.
-  --version     Show version.
-  --output=<kind>  Kind of output, either csv or verbose.
 """
 
 import tempfile
@@ -128,4 +117,4 @@ def compute(owner_name, repo_name, end_commit_sha = None, start_commit_sha = Non
     owner_df, owner_freq_df = create_file_owner_data(complete_df)
     truckfactor, authors = compute_truck_factor(owner_df, owner_freq_df)
 
-    return truckfactor, list(authors.values), start_commit_sha
+    return truckfactor, list(authors.values)

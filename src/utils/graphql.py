@@ -2,7 +2,9 @@ import requests
 
 from src.config import Config as config
 
-headers = {"Authorization": config.get_config()["token"], 
+conf = config.get_config()
+
+headers = {"Authorization": conf["token"], 
            "Accept": "application/vnd.github+json",
            "X-GitHub-Api-Version": "2022-11-28"}
 
@@ -23,7 +25,7 @@ def query_api(url: str):
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, url))
     
-query_star_headers = {"Authorization": config.get_config()["token"], 
+query_star_headers = {"Authorization": conf["token"], 
            "Accept": "application/vnd.github.v3.star+json"}
 
 def query_star(url: str):

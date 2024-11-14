@@ -147,5 +147,7 @@ def calc_developers_focuse_rate_on_repo(owner_name, repo_name, name,
 
     return commit_on_repo / all_commit, commit_on_repo, all_commit
 
+
+
 if __name__ == "__main__":
     print(get_developer_s_commits_on_all_repos_ranging_from_to("Alanxtl", "2024-01-01", "2025-01-01"))

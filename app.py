@@ -12,9 +12,18 @@ conf = config.get_config()
 logger.add(conf["log_path"] + "/{time}.log", level="DEBUG")
 
 st.title("Repository Data Explorer")
-
 owner_name = st.text_input("Enter the Owner Name:")
 repo_name = st.text_input("Enter the Repository Name:")
+
+# 创建列布局
+col1, col2 = st.columns([2, 1])  # 比例1:2，col2会更宽
+
+with col2:
+    with st.expander("Advanced Configuration", expanded=False):
+        # st.subheader("Advanced Configuration")
+        window_size = st.number_input("Window Size (Months)", min_value=1, value=conf["window_size"])
+        step_size = st.number_input("Step Size (Months)", min_value=1, max_value=window_size, value=conf["step_size"])
+        predict_size = st.number_input("Predict Size (Months)", min_value=1, value=conf["predict_size"])
 
 # 创建一个字典来存储数据
 data = {
@@ -26,18 +35,17 @@ data = {
 
 def fetch_da1(repo):
     data["basic_data"] = repo.get_repo_basic_data()
-
 def fetch_data_0(repo):
     data["commit_data"] = repo.get_commit_data()
-
 def fetch_data_1(repo):
     data["issue_data"] = repo.get_issue_data()
-
 def fetch_data_2(repo):
     data["code_data"] = repo.get_code_data()
 
-
 if st.button("Fetch Data"):
+
+    config.set_size(window_size, step_size, predict_size)
+
     if owner_name and repo_name:
         state = 0
         progress_bar = st.progress(state)  # 创建进度条
@@ -105,8 +113,6 @@ if st.button("Fetch Data"):
 
         # 绘制线图
         st_echarts(options=options0, height="400px", key="Commit_Data")
-
-        # 绘制线图
 
         thread1.start()
         thread3.start()

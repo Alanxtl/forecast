@@ -4,6 +4,9 @@ from loguru import logger
 from src.crawler.fetcher.commits import preprocess_git_log_data, slice_all_commit_data
 from src.crawler.fetcher.issues import get_all_issues, get_sliced_issues
 from src.crawler.fetcher.star import get_sliced_stars
+from src.config import Config as config
+
+conf = config.get_config()
 
 class repo:
 
@@ -55,7 +58,7 @@ class repo:
         if self.all_commits is None:
             self.all_commits = pd.read_csv(preprocess_git_log_data(self.owner_name, self.repo_name))
         if self.sliced_commits == []:
-            self.sliced_commits, self.slice_rules = slice_all_commit_data(self.owner_name, self.repo_name)
+            self.sliced_commits, self.slice_rules = slice_all_commit_data(self.owner_name, self.repo_name, window_size=conf["window_size"], step_length=conf["step_size"])
         if self.modefied_file_count_in_total == []:
             self.modefied_file_count_in_total = [sum(int(commit["file_count"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
         if self.modefied_file_count_on_ave == []:
@@ -128,5 +131,11 @@ class repo:
         except Exception as e:
             raise Exception("Data not initialized, please get them first")
     
+    def update(self):
+        self.get_repo_basic_data()
+        self.get_commit_data()
+        self.get_issue_data()
+        self.get_code_data()
+
     def out_put_to_log(self):
         logger.info(self.__str__())
