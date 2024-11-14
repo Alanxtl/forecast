@@ -258,6 +258,8 @@ if st.button("Fetch Data"):
         progress_bar.empty()  # 清空进度条
         status_text.empty()  # 清空状态文本
 
+        repo.out_put_to_log()
+
         with st.expander("Repository Summary", expanded=False):
             for key, value in repo.get_summary().items():
                 st.write(f"**{key}:** {value}")

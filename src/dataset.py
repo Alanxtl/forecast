@@ -88,46 +88,45 @@ class repo:
         
         return self.added_code_line, self.removed_code_line, self.modefied_file_count_on_ave
 
-
-
-
-
     def __str__(self) -> str:
-        str = "%s/%s\n" % (self.owner_name, self.repo_name)
-        str += "all_commits (n): %d" % len(self.all_commits) + "\n"
-        str += "slices (n): %d" % len(self.slice_rules) + "\n"
-        str += "sliced_commits ([n]): %s" % [len(i) for i in self.sliced_commits] + "\n"
-        str += "all_issues (n): %d" % len(self.all_issues) + "\n"
-        str += "created_issues ([n]): %s" % self.created_issues + "\n"
-        str += "closed_issues ([n]): %s" % self.closed_issues + "\n"
-        # str += "lable_counts_in_total (n): %s" % self.lable_counts_in_total + "\n"
-        str += "lable_counts_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.lable_counts_on_ave) + ']' + "\n"
-        str += "added_code_line ([n]): %s" % self.added_code_line + "\n"
-        str += "removed_code_line ([n]): %s" % self.removed_code_line + "\n"
-        # str += "modefied_file_count ([n]): %s" % self.modefied_file_count + "\n"
-        str += "modefied_file_count_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.modefied_file_count_on_ave) + ']' + "\n"
-        str += "added_star_count ([n]): %s" % self.added_star_count + "\n"
+        try:
+            str = "%s/%s\n" % (self.owner_name, self.repo_name)
+            str += "all_commits (n): %d" % len(self.all_commits) + "\n"
+            str += "slices (n): %d" % len(self.slice_rules) + "\n"
+            str += "sliced_commits ([n]): %s" % [len(i) for i in self.sliced_commits] + "\n"
+            str += "all_issues (n): %d" % len(self.all_issues) + "\n"
+            str += "created_issues ([n]): %s" % self.created_issues + "\n"
+            str += "closed_issues ([n]): %s" % self.closed_issues + "\n"
+            # str += "lable_counts_in_total (n): %s" % self.lable_counts_in_total + "\n"
+            str += "lable_counts_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.lable_counts_on_ave) + ']' + "\n"
+            str += "added_code_line ([n]): %s" % self.added_code_line + "\n"
+            str += "removed_code_line ([n]): %s" % self.removed_code_line + "\n"
+            # str += "modefied_file_count ([n]): %s" % self.modefied_file_count + "\n"
+            str += "modefied_file_count_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.modefied_file_count_on_ave) + ']' + "\n"
+            str += "added_star_count ([n]): %s" % self.added_star_count + "\n"
+        except Exception:
+            raise Exception("Data not initialized, please get them first")
 
         return str
 
-    def get_data(self):
-        pass
-
     def get_summary(self):
-        return {
-            "Owner/Repo": f"{self.owner_name}/{self.repo_name}",
-            "All Commits": len(self.all_commits),
-            "Slice Rules": len(self.slice_rules),
-            "Sliced Commits": [len(i) for i in self.sliced_commits],
-            "All Issues": len(self.all_issues),
-            "Created Issues": self.created_issues,
-            "Closed Issues": self.closed_issues,
-            "Label Counts on Average": [f"{num:.2f}" for num in self.lable_counts_on_ave],
-            "Added Code Lines": self.added_code_line,
-            "Removed Code Lines": self.removed_code_line,
-            "Modified File Count on Average": [f"{num:.2f}" for num in self.modefied_file_count_on_ave],
-            "Added Star Count": self.added_star_count
-        }
+        try:
+            return {
+                "Owner/Repo": f"{self.owner_name}/{self.repo_name}",
+                "All Commits": len(self.all_commits),
+                "Slice Rules": len(self.slice_rules),
+                "Sliced Commits": [len(i) for i in self.sliced_commits],
+                "All Issues": len(self.all_issues),
+                "Created Issues": self.created_issues,
+                "Closed Issues": self.closed_issues,
+                "Label Counts on Average": [f"{num:.2f}" for num in self.lable_counts_on_ave],
+                "Added Code Lines": self.added_code_line,
+                "Removed Code Lines": self.removed_code_line,
+                "Modified File Count on Average": [f"{num:.2f}" for num in self.modefied_file_count_on_ave],
+                "Added Star Count": self.added_star_count
+            }
+        except Exception as e:
+            raise Exception("Data not initialized, please get them first")
     
-def create_repo(owner_name, repo_name, progress_bar) -> repo:
-    return repo(owner_name, repo_name)
+    def out_put_to_log(self):
+        logger.info(self.__str__())
