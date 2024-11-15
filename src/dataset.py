@@ -4,6 +4,7 @@ from loguru import logger
 
 from src.crawler.fetcher.commits import preprocess_git_log_data, slice_all_commit_data
 from src.crawler.fetcher.issues import get_all_issues, get_sliced_issues
+from src.crawler.fetcher.pr import get_repo_all_prs, get_sliced_prs
 from src.crawler.fetcher.star import get_sliced_stars
 from src.crawler.fetcher.developer import calc_ave_focus_rate
 from src.crawler.truck_factor.compute import compute
@@ -34,6 +35,15 @@ class repo:
         """issue Labels 种类总和"""
         self.lable_counts_on_ave: list = []
         """issue Labels 平均种类"""
+
+        self.all_prs = None
+        """所有的 PR"""
+        self.created_prs: list = []
+        """新增的 PR 数"""
+        self.closed_prs: list = []
+        """关闭的 PR 数"""
+        self.pr_length: list = []
+        """PR 的平均处理时长"""
 
         self.added_code_line: list = []
         """新增的代码行数"""
@@ -89,6 +99,16 @@ class repo:
             
         return self.created_issues, self.closed_issues, self.lable_counts_on_ave
 
+    def get_pr_data(self):
+        """表4的数据: 新建的 PR 数、关闭的 PR 数"""
+
+        if self.all_prs is None:
+            self.all_prs = get_repo_all_prs(self.owner_name, self.repo_name)
+        if self.created_prs == []:
+            self.created_prs, self.closed_prs, self.pr_length = get_sliced_prs(self.owner_name, self.repo_name, self.slice_rules)
+        
+        return self.created_prs, self.closed_prs, self.pr_length
+
     def get_code_data(self):
         """表2的数据: 新增的代码行数、删除的代码行数 和 修改的模块数"""
 
@@ -128,6 +148,10 @@ class repo:
             str += "truck_factor (n): %s" % list(self.truck_factor["truckfactor"].to_dict().keys()) + "\n"
             str += "core_developers (n): %s" % list(self.truck_factor["authors"].to_dict().values()) + "\n"
             str += "core_developers_focus_rate ([n]): %s" % self.core_developers_focus_rate + "\n"
+            # str += "pr_in_total (n): %s" % self.all_prs + "\n"
+            str += "created_prs ([n]): %s" % self.created_prs + "\n"
+            str += "closed_prs ([n]): %s" % self.closed_prs + "\n"
+            str += "pr_length ([n]): %s" % self.pr_length + "\n"
         except Exception:
             raise Exception("Data not initialized, please get them first")
 
@@ -150,7 +174,11 @@ class repo:
                 "Added Star Count": self.added_star_count,
                 "Truck Factor": list(self.truck_factor["truckfactor"].to_dict().keys()),
                 "Core Developers": list(self.truck_factor["authors"].to_dict().values()),
-                "Core Developers Focus Rate": self.core_developers_focus_rate
+                "Core Developers Focus Rate": [f"{num:.2f}" for num in self.core_developers_focus_rate],
+                "Created PRs": self.created_prs,
+                "Closed PRs": self.closed_prs,
+                "PR Length": [f"{num:.2f}" for num in self.pr_length],
+
             }
         except Exception as e:
             raise Exception("Data not initialized, please get them first")
@@ -161,6 +189,7 @@ class repo:
         self.get_issue_data()
         self.get_code_data()
         self.get_social_data()
+        self.get_pr_data()
 
     def out_put_to_log(self):
         logger.info(self.__str__())

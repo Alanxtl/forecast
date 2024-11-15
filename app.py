@@ -43,6 +43,8 @@ def fetch_data_2(repo):
     data["code_data"] = repo.get_code_data()
 def fetch_data_3(repo):
     data["social_data"] = repo.get_social_data()
+def fetch_data_4(repo):
+    data["pr_data"] = repo.get_pr_data()
 
 if st.button("Fetch Data"):
 
@@ -64,6 +66,7 @@ if st.button("Fetch Data"):
         thread3 = threading.Thread(target=fetch_data_1, args=(repo, ))
         thread4 = threading.Thread(target=fetch_data_2, args=(repo, ))
         thread5 = threading.Thread(target=fetch_data_3, args=(repo, ))
+        thread6 = threading.Thread(target=fetch_data_4, args=(repo, ))
 
         status_text.text("Fetching data... Please wait.")
 
@@ -121,12 +124,14 @@ if st.button("Fetch Data"):
         thread3.start()
         thread4.start()
         thread5.start()
+        thread6.start()
 
         lock = threading.Lock()
         fu1 = True
         tu1 = True
         tu2 = True
         tu3 = True
+        tu4 = True
 
         while fu1 or tu1 or tu2:
             time.sleep(0.1)
@@ -303,10 +308,65 @@ if st.button("Fetch Data"):
                 with lock:
                     tu3 = False
 
+            # 表4
+            if not thread6.is_alive() and tu4:
+                state += 10
+                progress_bar.progress(state)
+                options4 = {
+                    "title": {"text": "PR Data"},
+                    "tooltip": {"trigger": "axis"},
+                    "legend": {"data": ["Created PRs", "Closed PRs"]},
+                    "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
+                    "toolbox": {"feature": {"saveAsImage": {}}},
+                    "xAxis": {
+                        "type": "category",
+                        "boundaryGap": False,
+                        "data": slice_starts,
+                    },
+                    "yAxis": [
+                        {
+                            "type": "value",
+                            "name": "PRs (n)",  
+                            "position": "left",
+                        },
+                        {
+                            "type": "value",
+                            "name": "Hours (n)",  
+                            "position": "right",
+                        },
+                    ],
+                    "series": [
+                        {
+                            "name": "Created PRs",
+                            "type": "line",
+                            "data": data["pr_data"][0],
+                            "yAxisIndex": 0,  
+                        },
+                        {
+                            "name": "Closed PRs",
+                            "type": "line",
+                            "data": data["pr_data"][1],
+                            "yAxisIndex": 0, 
+                        },
+                        {
+                            "name": "PR Handled Time On Average",
+                            "type": "line",
+                            "data": data["pr_data"][2],
+                            "yAxisIndex": 1, 
+                        }
+                    ],
+                }
+
+                # 绘制线图
+                st_echarts(options=options4, height="400px", key="pr_data")
+                with lock:
+                    tu4 = False
+
         thread1.join()
         thread3.join()
         thread4.join()
         thread5.join()
+        thread6.join()
 
         progress_bar.empty()  # 清空进度条
         status_text.empty()  # 清空状态文本
