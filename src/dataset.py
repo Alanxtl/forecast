@@ -1,9 +1,12 @@
+import ast
 import pandas as pd
 from loguru import logger
 
 from src.crawler.fetcher.commits import preprocess_git_log_data, slice_all_commit_data
 from src.crawler.fetcher.issues import get_all_issues, get_sliced_issues
 from src.crawler.fetcher.star import get_sliced_stars
+from src.crawler.fetcher.developer import calc_ave_focus_rate
+from src.crawler.truck_factor.compute import compute
 from src.config import Config as config
 
 conf = config.get_config()
@@ -43,6 +46,11 @@ class repo:
 
         self.added_star_count: list = []
         """新增的 star 数"""
+
+        self.truck_factor = None
+        """truck factor"""
+        self.core_developers_focus_rate: list = []
+        """核心开发者的关注度"""
 
     def get_repo_basic_data(self):
         """表-1的数据: star 数"""
@@ -90,6 +98,16 @@ class repo:
             self.removed_code_line = [sum(int(commit["removed"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
         
         return self.added_code_line, self.removed_code_line, self.modefied_file_count_on_ave
+
+    def get_social_data(self):
+        """表3的数据: 核心开发者的关注度"""
+
+        if self.truck_factor is None:
+            self.truck_factor = compute(self.owner_name, self.repo_name, self.slice_rules)
+        if self.core_developers_focus_rate == []:
+            self.core_developers_focus_rate = calc_ave_focus_rate(self.truck_factor, self.repo_name, self.slice_rules)
+        
+        return list(self.truck_factor["truckfactor"].to_dict().values()), self.core_developers_focus_rate
 
     def __str__(self) -> str:
         try:

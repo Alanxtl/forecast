@@ -67,6 +67,8 @@ def _get_current_for(new_name):
 
 def repair(log_csv_name):
     df = pd.read_csv(log_csv_name, parse_dates=["date"], na_values=["-", "", "\"-\""])
+    if df.empty:
+        return log_csv_name
     df["added"] = df["added"].fillna("0").astype(int)
     df["removed"] = df["removed"].fillna("0").astype(int)
     # df["date"] = df["date"].apply(parse_datetime)
@@ -161,7 +163,7 @@ def repair(log_csv_name):
     # 根据 date 字段排序
     df = df.sort_values(by='date', ascending=False)
 
-    df.to_csv(log_csv_name)
+    df.to_csv(log_csv_name, index=False)
 
     logger.info(f"Repair {log_csv_name}")
 

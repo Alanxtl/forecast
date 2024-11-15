@@ -15,12 +15,16 @@ More on the truck factor:
   * https://legacy.python.org/search/hypermail/python-1994q2/1040.html
 """
 
+import os
 import tempfile
+from typing import Tuple
 
+from loguru import logger
 import pandas as pd
 
-from src.utils.git_funcs import clone_to_tmp, is_git_url
 from src.crawler.fetcher.commits import preprocess_git_log_data
+from src.utils.datetime_parser import parse_datetime
+from src.config import Config as config
 
 TMP = tempfile.gettempdir()
 
@@ -65,7 +69,8 @@ def create_file_owner_data(df):
 
     return owner_df, owner_freq_df
 
-def compute_truck_factor(df, freq_df):
+
+def compute_truck_factor(df, freq_df) -> Tuple[int, pd.DataFrame]:
     """Similar to G. Avelino et al.
     [*A novel approach for estimating Truck Factors*](https://ieeexplore.ieee.org/stamp)/stamp.jsp?arnumber=7503718)
     we remove low-contributing authors from the dataset as long as still more
@@ -90,31 +95,30 @@ def compute_truck_factor(df, freq_df):
     truckfactor = len(freq_df.main_dev) - count
     return truckfactor, freq_df.iloc[idx:].main_dev
 
-def compute(owner_name, repo_name, end_commit_sha = None, start_commit_sha = None):
+def compute(owner_name, repo_name, slice_rules):
+    file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_truckfactor.csv"
+
+    if os.path.exists(file):
+        return pd.read_csv(file)
+
     evo_log_csv = preprocess_git_log_data(owner_name, repo_name)
     complete_df = pd.read_csv(evo_log_csv)
 
-    first_occurrence_index = -1
-    end_occurrence_index = complete_df.index.max()
+    list = []
 
-    if not start_commit_sha is None:
-        first_occurrence_index = complete_df[complete_df['hash'] == start_commit_sha].index.max()
+    complete_df["date"] = complete_df["date"].apply(lambda x: parse_datetime(x))
+
+    for start_date, end_date in slice_rules:
+        df = complete_df[(complete_df['date'] >= start_date) & (complete_df['date'] < end_date)]
+
+        owner_df, owner_freq_df = create_file_owner_data(df)
+        truckfactor, authors = compute_truck_factor(owner_df, owner_freq_df)
+
+        list.append({"truckfactor": truckfactor, "authors": authors.tolist()})
     
-        if pd.isna(first_occurrence_index):
-            raise ValueError(f"commit_sha {start_commit_sha} not found in the log data.")
+    df = pd.DataFrame(list)
+    df.to_csv(file, index=False)
 
-            
-    if end_commit_sha is not None:
-        end_occurrence_index = complete_df[complete_df['hash'] == end_commit_sha].index.max()
-         
-        if pd.isna(end_occurrence_index):
-            raise ValueError(f"commit_sha {end_commit_sha} not found in the log data.")
+    logger.info(f"Write {len(df)} commits to {file}")
 
-
-    # 保留从 start_commit_sha 到 end_commit_sha 的行
-    complete_df = complete_df.iloc[first_occurrence_index + 1:end_occurrence_index + 1]
-
-    owner_df, owner_freq_df = create_file_owner_data(complete_df)
-    truckfactor, authors = compute_truck_factor(owner_df, owner_freq_df)
-
-    return truckfactor, list(authors.values)
+    return df

@@ -20,7 +20,7 @@ def query_api(url: str):
     # print(url)
     if request.status_code == 200 or request.status_code == 304:
         return request.json()
-    if request.status_code == 409:
+    if request.status_code == 409 or request.status_code == 404:
         return []
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, url))

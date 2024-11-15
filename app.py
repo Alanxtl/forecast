@@ -41,6 +41,9 @@ def fetch_data_1(repo):
     data["issue_data"] = repo.get_issue_data()
 def fetch_data_2(repo):
     data["code_data"] = repo.get_code_data()
+def fetch_data_3(repo):
+    data["social_data"] = repo.get_social_data()
+    print(data["social_data"][0])
 
 if st.button("Fetch Data"):
 
@@ -61,6 +64,7 @@ if st.button("Fetch Data"):
         thread1 = threading.Thread(target=fetch_da1, args=(repo, ))
         thread3 = threading.Thread(target=fetch_data_1, args=(repo, ))
         thread4 = threading.Thread(target=fetch_data_2, args=(repo, ))
+        thread5 = threading.Thread(target=fetch_data_3, args=(repo, ))
 
         status_text.text("Fetching data... Please wait.")
 
@@ -117,18 +121,20 @@ if st.button("Fetch Data"):
         thread1.start()
         thread3.start()
         thread4.start()
+        thread5.start()
 
         lock = threading.Lock()
         fu1 = True
         tu1 = True
         tu2 = True
+        tu3 = True
 
         while fu1 or tu1 or tu2:
             time.sleep(0.1)
 
             # 图表-1
             if not thread1.is_alive() and fu1:
-                state += 25
+                state += 10
                 progress_bar.progress(state)
                 opt1 = {
                     "title": {"text": "Repo Basic Data"},
@@ -164,7 +170,7 @@ if st.button("Fetch Data"):
 
             # 图表1
             if not thread3.is_alive() and tu1:
-                state += 25
+                state += 10
                 progress_bar.progress(state)
                 options1 = {
                     "title": {"text": "Issue Data"},
@@ -217,8 +223,8 @@ if st.button("Fetch Data"):
                     tu1 = False
 
             # 表2
-            if not thread3.is_alive() and tu2:
-                state += 25
+            if not thread4.is_alive() and tu2:
+                state += 10
                 progress_bar.progress(state)
                 options2 = {
                     "title": {"text": "Code Data"},
@@ -257,9 +263,51 @@ if st.button("Fetch Data"):
                 with lock:
                     tu2 = False
 
+            # 表3
+            if not thread5.is_alive() and tu3:
+                state += 10
+                progress_bar.progress(state)
+                options3 = {
+                    "title": {"text": "Social Data"},
+                    "tooltip": {"trigger": "axis"},
+                    "legend": {"data": ["Added Code Line", "Removed Code Line"]},
+                    "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
+                    "toolbox": {"feature": {"saveAsImage": {}}},
+                    "xAxis": {
+                        "type": "category",
+                        "boundaryGap": False,
+                        "data": slice_starts,
+                    },
+                    "yAxis": {
+                        "type": "value",
+                        "name": "Lines (n)",  # 主纵坐标名称
+                        "position": "left",
+                    },
+                    "series": [
+                        {
+                            "name": "Truck Factor",
+                            "type": "line",
+                            "data": data["social_data"][0],
+                            "yAxisIndex": 0,
+                        },
+                        {
+                            "name": "Core Developers' Focus Rate",
+                            "type": "line",
+                            "data": data["social_data"][1],
+                            "yAxisIndex": 0,
+                        },
+                    ],
+                }
+
+                # 绘制线图
+                st_echarts(options=options3, height="400px", key="Social_Data")
+                with lock:
+                    tu3 = False
+
         thread1.join()
         thread3.join()
         thread4.join()
+        thread5.join()
 
         progress_bar.empty()  # 清空进度条
         status_text.empty()  # 清空状态文本

@@ -2,7 +2,7 @@ import os
 import csv
 import tempfile
 import subprocess
-from pathlib import Path
+from pathlib import Path    
 
 from datetime import datetime, timedelta
 from loguru import logger
@@ -134,13 +134,10 @@ def preprocess_git_log_data(owner_name, repo_name):
         return csv_file
 
     evo_log = write_git_log_to_file(owner_name, repo_name)
-    evo_log_csv = convert(owner_name, repo_name, evo_log)
-    try:
-        evo_log_csv = repair(evo_log_csv)
-    except ValueError:
-        msg = "Seems to be an empty repository." + " Cannot compute truck factor for it.\n"
+    evo_log = convert(evo_log, csv_file)
+    evo_log = repair(evo_log)
 
-    return evo_log_csv
+    return evo_log
 
 def get_last_commit_date(owner_name, repo_name):
     csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"

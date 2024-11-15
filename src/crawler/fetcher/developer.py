@@ -1,14 +1,21 @@
 import ast
-import datetime
 import os
-import csv
-from datetime import datetime
+import tempfile
+from pathlib import Path
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
 
+import pandas as pd
 from loguru import logger
 
 from src.config import Config as config
 from src.utils.graphql import query_api
 from src.utils.datetime_parser import parse_datetime
+from src.utils.git_funcs import clone_to_tmp
+from src.utils.evo_log_to_csv import convert
+from src.utils.repair_git_move import repair
+
+TMP = tempfile.gettempdir()
 
 def get_developer_s_all_repos(name): 
     """获取某人所有的 repo"""
@@ -35,7 +42,7 @@ def get_developer_s_all_repos(name):
             repo = item['name']
             all_repos.append(repo)
     except Exception as e:
-        print(e)
+        raise Exception(e)
 
     with open(file, mode='w', newline='', encoding='utf-8') as file:
         try:
@@ -45,109 +52,134 @@ def get_developer_s_all_repos(name):
 
     return all_repos
 
-def get_developer_s_commits_on_all_repos(name): 
-    repos = get_developer_s_all_repos(name)
+def write_git_log_to_file_author(owner_name, repo_name, name):
+    path_to_repo = r"https://github.com/" + f"{owner_name}/{repo_name}" + r".git"
+    
+    p = Path(clone_to_tmp(path_to_repo))
 
-    sum = 0
-    for repo in repos:
-        sum += get_developer_s_all_commits_on_specific_repo(name, repo, name)
+    outfile = os.path.join(TMP, p.name + "_evo.log")
 
-    return sum
+    cmd = (
+        f"git -C {p} log "
+        f"--author={name} "
+        r'--pretty=format:"\"%H\",\"%an\",\"%ae\",\"%aI\",\"%f\"" '
+        f"--date=short --numstat > {outfile}"
+    )
+
+    subprocess.run(cmd, shell=True)
+
+    return outfile
 
 def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
     csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if os.path.exists(csv_file):
-        with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
-            try:
-                reader = csv.DictReader(file)
-                commits = list(reader)
+        return csv_file
 
-            finally:
-                file.close()
+    evo_log = write_git_log_to_file_author(owner_name, repo_name, name)
+    evo_log = convert(evo_log, csv_file)
+    evo_log = repair(evo_log)
+    
+    df = pd.read_csv(evo_log, parse_dates=["date"], na_values=["-", "", "\"-\""])
 
-            return len(commits)
+    logger.info(f"Write {len(df)} commits to {evo_log}")
 
-    rets = []
-    for i in range(1, 99999999):
-        quert_url = 'https://api.github.com/repos/%s/%s/commits?author=%s&per_page=100&page=%d' % (owner_name, repo_name, name, i)
-        response = query_api(quert_url)
-        if response == []:
-            break
-        rets.extend(response)
-        logger.debug(f"{csv_file} cursor at {i}")
+    return evo_log
 
-    commits = []
-    for ret in rets:
-            commit = ret
-            commits.append({
-                "sha": commit["sha"],
-                "committedDate": commit["commit"]["author"]["date"],
-                "message": commit["commit"]["message"],
-                "author_name": commit["commit"]["author"]["name"],
-                "author_email": commit["commit"]["author"]["email"],
-                # "file": commit["file"],
-            })
-
-    # 写入 CSV 文件
-    with open(csv_file, mode='w', newline='', encoding='utf-8') as file:
-        try:
-            writer = csv.DictWriter(file, fieldnames=["sha", "committedDate", "message", 
-                                                      "author_name", "author_email"])
-            writer.writeheader()  # 写入表头
-            writer.writerows(commits)  # 写入所有提交信息
-        finally:
-            file.close()
-
-    logger.info(f"Write {len(commits)} commits to {csv_file}")
-    return len(commits)
-
-def get_developer_s_all_commits_on_specific_repo_ranging_from_to(owner_name, repo_name, name,
-                                                                 start: str = '2000-01-01', 
-                                                                 end: str = datetime.now().strftime('%Y-%m-%d')):
-    start_time = datetime.strptime(start, "%Y-%m-%d")
-    end_time = datetime.strptime(end, "%Y-%m-%d")
-
+def get_sliced_commits(owner_name, repo_name, slice_rules, name) -> list:
+    # 读取 CSV 文件
     csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if not os.path.exists(csv_file):
         get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name)
 
-    # 写入 CSV 文件
-    count = 0
-    with open(csv_file, mode='r', newline='', encoding='utf-8') as file:
+    df = pd.read_csv(csv_file, na_values=["-", "", "\"-\""])
+
+    # 转换 createdAt 和 closedAt 列
+    df['date'] = df['date'].apply(lambda x: parse_datetime(x))
+    
+    # 存储每个切片的数量
+    counts = []
+    
+    for start_date, end_date in slice_rules:
+        count = df[(df['date'] >= start_date) & (df['date'] < end_date)].shape[0]
+        counts.append(count)
+
+    return counts
+
+def get_sliced_commits_on_all_repos(name, slice_rules):
+    csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_sliced_commits_on_all_repos.csv"
+
+    if os.path.exists(csv_file):
         try:
-            reader = csv.DictReader(file)
-            commits = list(reader)
+            return pd.read_csv(csv_file)
+        except Exception as e:
+            return pd.DataFrame(["hash", "author_name", 
+                                 "author_email", "date", 
+                                 "message", "added", "removed", "fname"])
 
-            for row in commits:
-                t = parse_datetime(row["committedDate"])
-                if t < end_time and t >= start_time:
-                    count += 1
-        finally:
-            file.close()
-
-    return count
-
-def get_developer_s_commits_on_all_repos_ranging_from_to(name, start: str = '2000-01-01', end: str = datetime.now().strftime('%Y-%m-%d')):
     repos = get_developer_s_all_repos(name)
 
-    sum = 0
-    for repo in repos:
-        sum += get_developer_s_all_commits_on_specific_repo_ranging_from_to(name, repo, name, start, end)
+    # 定义一个字典来存储结果
+    results = {}
 
-    return sum
+    # 定义一个函数以便在多线程中使用
+    def process_repo(repo):
+        counts = get_sliced_commits(name, repo, slice_rules, name)
+        results[repo] = counts
 
-def calc_developers_focuse_rate_on_repo(owner_name, repo_name, name, 
-                                        start: str = "2000-01-01", 
-                                        end: str = datetime.now().strftime('%Y-%m-%d')):
+    # 使用 ThreadPoolExecutor 进行多线程处理
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        executor.map(process_repo, repos)
 
-    commit_on_repo = get_developer_s_all_commits_on_specific_repo_ranging_from_to(owner_name, repo_name, name, start, end)
-    all_commit = get_developer_s_commits_on_all_repos_ranging_from_to(name, start, end)
+    # 将结果转换为 DataFrame
+    df = pd.DataFrame.from_dict(results, orient='index').T
 
-    return commit_on_repo / all_commit, commit_on_repo, all_commit
+    logger.info(f"Write {len(df)} commits to {csv_file}")
 
+    df.to_csv(csv_file, index=False)
 
+    return df
 
-if __name__ == "__main__":
-    print(get_developer_s_commits_on_all_repos_ranging_from_to("Alanxtl", "2024-01-01", "2025-01-01"))
+def calc_developers_focuse_rate_on_repo(name, repo_name, slice_rules):
+
+    df = get_sliced_commits_on_all_repos(name, slice_rules)
+
+    # 计算每行指定仓库数据占所有数据的比重
+    total_counts = df.sum(axis=1)  # 每行的总和
+    try:
+        repo_counts = df[repo_name]  # 指定仓库的数据
+    except KeyError:
+        return [0] * len(slice_rules)
+
+    # 计算比重，避免除以零
+    proportions = repo_counts / total_counts.replace(0, 1)  # 将零替换为1以避免除以零
+    proportions = proportions.fillna(0)  # 将 NaN 替换为 0
+
+    return proportions.to_list()
+
+def calc_ave_focus_rate(truck_factor, repo_name, slice_rules):
+    authors = truck_factor["authors"]
+
+    results = []
+
+    def process_author(author):
+        list = []
+        # print(author)
+        author = str(author)
+
+        author = ast.literal_eval(author)
+        for i in author:
+            counts = calc_developers_focuse_rate_on_repo(i, repo_name, slice_rules)
+            list.append(counts)
+        df = pd.DataFrame(list).T
+
+        results.append(df.mean(axis=1).tolist())
+
+    for author in authors:
+        process_author(author)
+
+    df = pd.DataFrame(results)
+
+    return df.mean(axis=0).to_list()
+

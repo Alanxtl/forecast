@@ -13,6 +13,8 @@ from loguru import logger
 
 TMP = tempfile.gettempdir()
 
+repos = {}
+
 def is_git_url(potential_url):
     result = urlparse(potential_url)
     is_complete_url = all((result.scheme, result.netloc, result.path))
@@ -33,11 +35,16 @@ def is_git_dir(potential_repo_path):
     return result.stdout.strip() == "true"
 
 def clone_to_tmp(url):
+    if url in repos:
+        return repos[url]
+
     path = Path(urlparse(url).path)
     outdir = path.name.removesuffix(path.suffix)
     git_repo_dir = os.path.join(TMP, outdir + str(uuid.uuid4()))
     cmd = f"git clone {url} {git_repo_dir} > /dev/null 2>&1"
     logger.info(cmd)
     subprocess.run(cmd, shell=True)
+
+    repos[url] = git_repo_dir
 
     return git_repo_dir

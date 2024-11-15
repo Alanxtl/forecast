@@ -29,7 +29,7 @@ def parse_numstat_block(commit_line, block):
         yield csv_line
 
 
-def convert(owner_name, repo_name, report_file):
+def convert(report_file, out_path):
     try:
         # In some rare cases UTF-8 characters, such as `ø` cannot be decoded
         # correctly. Even though, the `file` tool reports the log file as utf-8
@@ -65,7 +65,6 @@ def convert(owner_name, repo_name, report_file):
                 commit_block = []
     # out_file = f"{report_file}.csv"
     # out_path = os.path.join(tempfile.gettempdir(), out_file)
-    out_path = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     count = 0
     with open(out_path, "w", encoding="utf-8") as fp:
