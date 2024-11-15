@@ -125,6 +125,9 @@ class repo:
             # str += "modefied_file_count ([n]): %s" % self.modefied_file_count + "\n"
             str += "modefied_file_count_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.modefied_file_count_on_ave) + ']' + "\n"
             str += "added_star_count ([n]): %s" % self.added_star_count + "\n"
+            str += "truck_factor (n): %s" % list(self.truck_factor["truckfactor"].to_dict().keys()) + "\n"
+            str += "core_developers (n): %s" % list(self.truck_factor["authors"].to_dict().values()) + "\n"
+            str += "core_developers_focus_rate ([n]): %s" % self.core_developers_focus_rate + "\n"
         except Exception:
             raise Exception("Data not initialized, please get them first")
 
@@ -144,7 +147,10 @@ class repo:
                 "Added Code Lines": self.added_code_line,
                 "Removed Code Lines": self.removed_code_line,
                 "Modified File Count on Average": [f"{num:.2f}" for num in self.modefied_file_count_on_ave],
-                "Added Star Count": self.added_star_count
+                "Added Star Count": self.added_star_count,
+                "Truck Factor": list(self.truck_factor["truckfactor"].to_dict().keys()),
+                "Core Developers": list(self.truck_factor["authors"].to_dict().values()),
+                "Core Developers Focus Rate": self.core_developers_focus_rate
             }
         except Exception as e:
             raise Exception("Data not initialized, please get them first")
@@ -154,6 +160,7 @@ class repo:
         self.get_commit_data()
         self.get_issue_data()
         self.get_code_data()
+        self.get_social_data()
 
     def out_put_to_log(self):
         logger.info(self.__str__())

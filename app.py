@@ -22,7 +22,7 @@ with col2:
     with st.expander("Advanced Configuration", expanded=False):
         # st.subheader("Advanced Configuration")
         window_size = st.number_input("Window Size (Months)", min_value=1, value=conf["window_size"])
-        step_size = st.number_input("Step Size (Months)", min_value=1, max_value=window_size, value=conf["step_size"])
+        step_size = st.number_input("Step Size (Months)", min_value=1, max_value=window_size, value=min(conf["step_size"], window_size))
         predict_size = st.number_input("Predict Size (Months)", min_value=1, value=conf["predict_size"])
 
 # 创建一个字典来存储数据
@@ -43,7 +43,6 @@ def fetch_data_2(repo):
     data["code_data"] = repo.get_code_data()
 def fetch_data_3(repo):
     data["social_data"] = repo.get_social_data()
-    print(data["social_data"][0])
 
 if st.button("Fetch Data"):
 
@@ -270,7 +269,7 @@ if st.button("Fetch Data"):
                 options3 = {
                     "title": {"text": "Social Data"},
                     "tooltip": {"trigger": "axis"},
-                    "legend": {"data": ["Added Code Line", "Removed Code Line"]},
+                    "legend": {"data": ["Truck Factor", "Core Developers' Focus Rate"]},
                     "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True},
                     "toolbox": {"feature": {"saveAsImage": {}}},
                     "xAxis": {
