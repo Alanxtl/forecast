@@ -33,5 +33,5 @@ class Config:
     @staticmethod
     def set_token(t):
         Config.config["token"] = t
-        logger.info("Token: {}".format(Config.config["token"]))
+        logger.info("Token: {}".format(Config.config["token"][:4] + "*" * 32 + Config.config["token"][-4:]))
         
