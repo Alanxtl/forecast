@@ -1,3 +1,4 @@
+import os
 import threading
 import time
 
@@ -10,6 +11,15 @@ from src.config import Config as config
 
 conf = config.get_config()
 logger.add(conf["log_path"] + "/{time}.log", level="DEBUG")
+
+if not os.path.exists(conf["data_path"]):
+    os.mkdir(conf["data_path"])
+if not os.path.exists(conf["raw_data_path"]):
+    os.mkdir(conf["raw_data_path"])
+if not os.path.exists(conf["predict_data_path"]):
+    os.mkdir(conf["predict_data_path"])
+if not os.path.exists(conf["log_path"]):
+    os.mkdir(conf["log_path"])
 
 st.title("Repository Data Explorer")
 owner_name = st.text_input("Enter the Owner Name:")

@@ -1,4 +1,7 @@
+from calendar import c
 import configparser
+import toml
+from loguru import logger
 
 class Config:
     config = {}
@@ -15,6 +18,7 @@ class Config:
             Config.config["window_size"] = int(self.config_parsor.get("VAR","window_size"))
             Config.config["predict_size"] = int(self.config_parsor.get("VAR","predict_size"))
             Config.config["step_size"] = int(self.config_parsor.get("VAR","step_size"))
+        Config.get_token()
 
     @staticmethod
     def get_config():
@@ -27,3 +31,13 @@ class Config:
         Config.config["window_size"] = window_size
         Config.config["step_size"] = step_size
         Config.config["predict_size"] = predict_size
+
+    @staticmethod
+    def get_token():
+        try:
+            with open(r'.streamlit/config.toml', 'r') as f:
+                config = toml.load(f)
+                Config.config["token"] = config["token"]
+        finally:
+            logger.info("Token: {}".format(Config.config["token"]))
+            
