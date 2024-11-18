@@ -1,6 +1,5 @@
 from calendar import c
 import configparser
-import toml
 from loguru import logger
 
 class Config:
@@ -18,7 +17,6 @@ class Config:
             Config.config["window_size"] = int(self.config_parsor.get("VAR","window_size"))
             Config.config["predict_size"] = int(self.config_parsor.get("VAR","predict_size"))
             Config.config["step_size"] = int(self.config_parsor.get("VAR","step_size"))
-        Config.get_token()
 
     @staticmethod
     def get_config():
