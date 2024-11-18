@@ -12,6 +12,8 @@ from src.config import Config as config
 conf = config.get_config()
 logger.add(conf["log_path"] + "/{time}.log", level="DEBUG")
 
+config.set_token(st.secrets["token"])
+
 if not os.path.exists(conf["data_path"]):
     os.mkdir(conf["data_path"])
 if not os.path.exists(conf["raw_data_path"]):

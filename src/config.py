@@ -33,11 +33,7 @@ class Config:
         Config.config["predict_size"] = predict_size
 
     @staticmethod
-    def get_token():
-        try:
-            with open(r'.streamlit/config.toml', 'r') as f:
-                config = toml.load(f)
-                Config.config["token"] = config["token"]
-        finally:
-            logger.info("Token: {}".format(Config.config["token"]))
-            
+    def set_token(t):
+        Config.config["token"] = t
+        logger.info("Token: {}".format(Config.config["token"]))
+        
