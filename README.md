@@ -3,7 +3,6 @@
 ## Used APIs
 
 - GitHub REST API (https://docs.github.com/en/rest)
-- GitHub GraphQL API (https://docs.github.com/en/graphql)
 
 ## Credits
 
