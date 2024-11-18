@@ -160,26 +160,24 @@ def calc_developers_focuse_rate_on_repo(name, repo_name, slice_rules):
 
 def calc_ave_focus_rate(truck_factor, repo_name, slice_rules):
     authors = truck_factor["authors"]
-
     results = []
 
     def process_author(author):
-        list = []
-        # print(author)
         author = str(author)
-
         author = ast.literal_eval(author)
+        list_results = []
+        
         for i in author:
             counts = calc_developers_focuse_rate_on_repo(i, repo_name, slice_rules)
-            list.append(counts)
-        df = pd.DataFrame(list).T
+            list_results.append(counts)
+        
+        df = pd.DataFrame(list_results).T
+        return df.mean(axis=1).tolist()
 
-        results.append(df.mean(axis=1).tolist())
-
-    for author in authors:
-        process_author(author)
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        # 使用列表推导式提交任务并收集结果
+        results = list(executor.map(process_author, authors))
 
     df = pd.DataFrame(results)
 
-    return df.mean(axis=0).to_list()
-
+    return df.mean(axis=0).tolist()

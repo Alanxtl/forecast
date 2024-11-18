@@ -40,7 +40,7 @@ def get_repo_s_all_stars(owner_name, repo_name) -> pd.DataFrame:
             except Exception as e:
                 logger.error(f"Error querying page {i}: {e}")
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         while page <= last:
             executor.submit(worker, page)
             page += 10

@@ -89,7 +89,7 @@ class repo:
     def get_issue_data(self):
         """表1的数据: 新建的 issue 数、关闭的 issue 数 和 issue label 数"""
         if self.all_issues is None:
-            self.all_issues = pd.read_csv(get_all_issues(self.owner_name, self.repo_name))
+            self.all_issues = get_all_issues(self.owner_name, self.repo_name)
         if self.created_issues == []:
             self.created_issues, self.closed_issues, self.lable_counts_in_total = get_sliced_issues(self.owner_name, self.repo_name, self.slice_rules)
         if self.lable_counts_on_ave == []:
@@ -151,7 +151,7 @@ class repo:
             # str += "pr_in_total (n): %s" % self.all_prs + "\n"
             str += "created_prs ([n]): %s" % self.created_prs + "\n"
             str += "closed_prs ([n]): %s" % self.closed_prs + "\n"
-            str += "pr_length ([n]): %s" % self.pr_length + "\n"
+            str += "pr_length ([n]): %s" % [f"{num:.2f}" for num in self.pr_length] + "\n"
         except Exception:
             raise Exception("Data not initialized, please get them first")
 

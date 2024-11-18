@@ -1,6 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
-import ast
 import threading
 
 import pandas as pd
@@ -31,7 +30,7 @@ def get_repo_all_prs(owner_name, repo_name) -> pd.DataFrame:
     last = lastPage(owner_name, repo_name)  # 获取总页数的函数
 
     def worker(current_page):
-        nonlocal rets
+        nonlocal rets, page
         query_url = f'https://api.github.com/repos/{owner_name}/{repo_name}/pulls?state=all&per_page=100&page={current_page}'
         logger.debug(f"{csv_file} cursor at {current_page}")
         try:
@@ -39,9 +38,11 @@ def get_repo_all_prs(owner_name, repo_name) -> pd.DataFrame:
             with lock:
                 rets.extend(response)  # 解析时间戳等信息
         except Exception as e:
+            with lock:
+                page = current_page
             logger.error(f"Error querying page {current_page}: {e}")
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=6) as executor:
         while page <= last:
             executor.submit(worker, page)
             page += 1
