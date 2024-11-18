@@ -1,5 +1,10 @@
 # forecast
 
+## Prerequisites
+
+1. Install git
+2. Install [cloc](https://github.com/AlDanial/cloc?tab=readme-ov-file#install-via-package-manager)
+
 ## Used APIs
 
 - GitHub REST API (https://docs.github.com/en/rest)
