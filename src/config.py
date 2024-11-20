@@ -17,6 +17,8 @@ class Config:
             Config.config["window_size"] = int(self.config_parsor.get("VAR","window_size"))
             Config.config["predict_size"] = int(self.config_parsor.get("VAR","predict_size"))
             Config.config["step_size"] = int(self.config_parsor.get("VAR","step_size"))
+            Config.config["api_parrallel"] = int(self.config_parsor.get("code","api_parrallel"))
+            Config.config["inner_parrallel"] = int(self.config_parsor.get("code","inner_parrallel"))
 
     @staticmethod
     def get_config():

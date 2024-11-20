@@ -68,7 +68,7 @@ def convert(report_file, out_path):
 
     count = 0
     with open(out_path, "w", encoding="utf-8") as fp:
-        fp.write("hash,author_name,author_email,date,message,added,removed,fname\n")
+        fp.write("hash,author_name,author_email,committer_name,committer_email,date,message,added,removed,fname\n")
         for block in commit_blocks:
             commit_line = block[0]
             for csv_line in parse_numstat_block(commit_line, block[1:]):

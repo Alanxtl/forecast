@@ -69,7 +69,6 @@ def create_file_owner_data(df):
 
     return owner_df, owner_freq_df
 
-
 def compute_truck_factor(df, freq_df) -> Tuple[int, pd.DataFrame]:
     """Similar to G. Avelino et al.
     [*A novel approach for estimating Truck Factors*](https://ieeexplore.ieee.org/stamp)/stamp.jsp?arnumber=7503718)

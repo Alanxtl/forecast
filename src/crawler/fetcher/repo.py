@@ -4,7 +4,7 @@ import os
 from loguru import logger
 
 from src.config import Config as config
-from src.utils.graphql import query_api
+from src.utils.api import query_api
 
 def get_repo_s_info(owner_name, repo_name) -> dict: 
     """获取某 repo 的基本信息"""

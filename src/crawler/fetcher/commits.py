@@ -3,12 +3,12 @@ import csv
 import tempfile
 import subprocess
 from pathlib import Path    
-
 from datetime import datetime, timedelta
+
 from loguru import logger
 
 from src.config import Config as config
-from src.utils.graphql import query_graphql
+from src.utils.api import query_graphql
 from src.utils.datetime_parser import parse_datetime
 from src.utils.evo_log_to_csv import convert
 from src.utils.repair_git_move import repair
@@ -194,6 +194,7 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = conf["window
 
     slices = []
     slice_rules = []
+    slice_rules_by_sha = []
     total_commits = len(commits)
     window_days = window_size * 30
     step_days = step_length * 30
@@ -218,10 +219,11 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = conf["window
             current_ptr -= 1
 
         slices.append(slice_commits)
+        slice_rules_by_sha.append([slice_commits[0]['hash'], slice_commits[-1]['hash']])
         slice_rules.append([current_start_date, current_end_date])
         current_ptr = next_ptr
 
-    return slices, slice_rules
+    return slices, slice_rules, slice_rules_by_sha
 
 @DeprecationWarning
 def get_specific_developer_s_all_commit_on_specific_repo(owner_name, repo_name, name):

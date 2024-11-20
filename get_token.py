@@ -4,8 +4,9 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 
 # GitHub OAuth 配置
-client_id = "Ov23liyq1kbYVpyWxGDh"
-client_secret = "76d1db31217884b7a2f89b4f098471a76d975cd7"
+client_id = "Iv23liZ9UDTEOb32iDE3"
+# client_secret = "76d1db31217884b7a2f89b4f098471a76d975cd7"
+client_secret = "dfa7081fd64b287f6fae3aa1143e34a1076edc7b"
 redirect_uri = "http://localhost:8080/callback"  # 本地回调地址
 
 # 1. 构建授权 URL
@@ -58,7 +59,8 @@ response = requests.post(token_url, headers=headers, data=data)
 # 6. 处理返回结果
 if response.status_code == 200:
     token_info = response.json()
+    print(token_info)
     access_token = token_info.get('access_token')
     print(f"获取的access_token：\n{access_token}")
 else:
-    print("获取access_token失败:", response.text)            
+    print("获取access_token失败:", response.text) 

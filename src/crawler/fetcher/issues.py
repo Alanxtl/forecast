@@ -1,17 +1,17 @@
 from concurrent.futures import ThreadPoolExecutor
 import os
+import re
 import threading
-import ast
 
 import pandas as pd
 from loguru import logger
 
 from src.config import Config as config
-from src.utils.graphql import query_api
+from src.utils.api import query_api
 from src.utils.datetime_parser import parse_datetime
 
 def totalPages(owner_name, repo_name) -> int:
-    query_url = f'https://api.github.com/repos/{owner_name}/{repo_name}/issues?per_page=1&page=1'
+    query_url = f'https://api.github.com/repos/{owner_name}/{repo_name}/issues?state=all&per_page=1&page=1'
     response = query_api(query_url)[0]["number"]
     return response / 100
 
@@ -32,29 +32,39 @@ def get_all_issues(owner_name, repo_name) -> pd.DataFrame:
 
     def worker(current_page):
         nonlocal rets, page
-        query_url = f'https://api.github.com/repos/{owner_name}/{repo_name}/issues?per_page=100&page={current_page}'
+        query_url = f'https://api.github.com/repos/{owner_name}/{repo_name}/issues?state=all&per_page=100&page={current_page}'
         logger.debug(f"{csv_file} cursor at {current_page}")
         try:
             response = query_api(query_url)  # 假设您有这个函数来发送请求
+
+            # 正则表达式模式
+            pattern = r"https:\/\/github\.com\/[^\/]+\/[^\/]+\/issues\/\d+"
+
+            # 筛选符合条件的字典
+            filtered_response = [
+                item for item in response
+                if re.match(pattern, item['html_url'])
+            ]
+            
             with lock:
-                rets.extend(response)  # 解析时间戳等信息
+                rets.extend(filtered_response)  # 解析时间戳等信息
         except Exception as e:
             with lock:
                 page = current_page
             logger.error(f"Error querying page {current_page}: {e}")
 
-    with ThreadPoolExecutor(max_workers=6) as executor:
+    with ThreadPoolExecutor(max_workers=config.get_config()["api_parrallel"]) as executor:
         while page <= last:
             executor.submit(worker, page)
             page += 1
 
     # 写入 CSV 文件
-    df = pd.DataFrame(rets, columns=["created_at", "updated_at", "closed_at", "user", "labels"])  # 根据需要调整列
+    df = pd.DataFrame(rets, columns=["created_at", "updated_at", "closed_at", "user", "labels", "state_reason"])  # 根据需要调整列
     df["user"] = df["user"].apply(lambda x: x["login"])  # 从用户对象中提取登录名
-    df["labels"] = df["labels"].apply(lambda x: len(ast.literal_eval(x)))  # 从用户对象中提取登录名
+    df["labels"] = df["labels"].apply(lambda x: len(x))  # 从用户对象中提取登录名
     df.to_csv(csv_file, index=False, encoding='utf-8')
 
-    logger.info(f"Write {len(rets)} PRs to {csv_file}")
+    logger.info(f"Write {len(rets)} commits to {csv_file}")
 
     return df
 
@@ -86,4 +96,11 @@ def get_sliced_issues(owner_name, repo_name, slice_rules):
         count = df[(df['closed_at'] >= start_date) & (df['closed_at'] < end_date)].shape[0]
         close_counts.append(count)
 
-    return created_counts, close_counts, lable_counts
+    reopen_counts = []
+
+    for start_date, end_date in slice_rules:
+        filter = df[(df['updated_at'] >= start_date) & (df['updated_at'] < end_date)]
+        reopen = filter[filter['state_reason'] == 'reopened'].shape[0]
+        reopen_counts.append(reopen)
+
+    return created_counts, close_counts, lable_counts, reopen_counts

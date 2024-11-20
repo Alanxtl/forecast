@@ -6,7 +6,7 @@ import pandas as pd
 from loguru import logger
 
 from src.config import Config as config
-from src.utils.graphql import query_api
+from src.utils.api import query_api
 from src.utils.datetime_parser import parse_datetime
 
 def totalPages(owner_name, repo_name) -> int:
@@ -42,7 +42,7 @@ def get_repo_all_prs(owner_name, repo_name) -> pd.DataFrame:
                 page = current_page
             logger.error(f"Error querying page {current_page}: {e}")
 
-    with ThreadPoolExecutor(max_workers=6) as executor:
+    with ThreadPoolExecutor(max_workers=config.get_config()["api_parrallel"]) as executor:
         while page <= last:
             executor.submit(worker, page)
             page += 1

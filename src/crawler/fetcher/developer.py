@@ -9,7 +9,7 @@ import pandas as pd
 from loguru import logger
 
 from src.config import Config as config
-from src.utils.graphql import query_api
+from src.utils.api import query_api
 from src.utils.datetime_parser import parse_datetime
 from src.utils.git_funcs import clone_to_tmp
 from src.utils.evo_log_to_csv import convert
@@ -61,8 +61,7 @@ def write_git_log_to_file_author(owner_name, repo_name, name):
 
     cmd = (
         f"git -C {p} log "
-        f"--author={name} "
-        r'--pretty=format:"\"%H\",\"%an\",\"%ae\",\"%aI\",\"%f\"" '
+        r'--pretty=format:"\"%H\",\"%an\",\"%ae\",\"%cn\",\"%ce\",\"%aI\",\"%f\"" '
         f"--date=short --numstat > {outfile}"
     )
 
@@ -70,7 +69,7 @@ def write_git_log_to_file_author(owner_name, repo_name, name):
 
     return outfile
 
-def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
+def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name, email):
     csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if os.path.exists(csv_file):
@@ -82,6 +81,11 @@ def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
     
     df = pd.read_csv(evo_log, parse_dates=["date"], na_values=["-", "", "\"-\""])
 
+    # 过滤出指定开发者的提交
+    email_prefix = email.split('@')[0]
+    df = df[(df["author_email"].str.split('@').str[0] == email_prefix) | 
+            (df["committer_email"].str.split('@').str[0] == email_prefix)]
+    
     logger.info(f"Write {len(df)} commits to {evo_log}")
 
     return evo_log
@@ -129,7 +133,7 @@ def get_sliced_commits_on_all_repos(name, slice_rules):
         results[repo] = counts
 
     # 使用 ThreadPoolExecutor 进行多线程处理
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=config.get_config()["inner_parrallel"]) as executor:
         executor.map(process_repo, repos)
 
     # 将结果转换为 DataFrame
@@ -174,7 +178,7 @@ def calc_ave_focus_rate(truck_factor, repo_name, slice_rules):
         df = pd.DataFrame(list_results).T
         return df.mean(axis=1).tolist()
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=config.get_config()["inner_parrallel"]) as executor:
         # 使用列表推导式提交任务并收集结果
         results = list(executor.map(process_author, authors))
 

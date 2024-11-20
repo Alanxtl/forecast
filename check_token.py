@@ -2,7 +2,7 @@ import json
 
 import streamlit as st
 
-from src.utils.graphql import get_rate_limit
+from src.utils.api import get_rate_limit
 from src.config import Config as config
 
 conf = config.get_config()

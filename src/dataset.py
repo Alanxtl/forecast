@@ -1,6 +1,7 @@
-import ast
+import datetime
 import pandas as pd
 from loguru import logger
+import pytz
 
 from src.crawler.fetcher.commits import preprocess_git_log_data, slice_all_commit_data
 from src.crawler.fetcher.issues import get_all_issues, get_sliced_issues
@@ -8,7 +9,13 @@ from src.crawler.fetcher.pr import get_repo_all_prs, get_sliced_prs
 from src.crawler.fetcher.star import get_sliced_stars
 from src.crawler.fetcher.developer import calc_ave_focus_rate
 from src.crawler.truck_factor.compute import compute
+from src.crawler.fetcher.code import get_code_analysis
+from src.crawler.fetcher.repo import get_repo_s_info
+from src.crawler.fetcher.fork import get_sliced_forks
+from src.crawler.fetcher.release import get_sliced_releases
 from src.config import Config as config
+from src.utils.datetime_parser import parse_datetime
+
 
 conf = config.get_config()
 
@@ -24,6 +31,8 @@ class repo:
         """新增的commit数量"""
         self.slice_rules: list = []
         """时间切片方法"""
+        self.slice_rules_by_sha: list = []
+        """时间切片方法(sha)"""
 
         self.all_issues = None
         """所有的issue"""
@@ -31,6 +40,8 @@ class repo:
         """新增issue数量"""
         self.closed_issues: list = []
         """Closed issue数量"""
+        self.reopened_issues: list = []
+        """Reopened issue数量"""
         self.lable_counts_in_total: list = []
         """issue Labels 种类总和"""
         self.lable_counts_on_ave: list = []
@@ -62,6 +73,26 @@ class repo:
         self.core_developers_focus_rate: list = []
         """核心开发者的关注度"""
 
+        self.md_files: list = []
+        """markdown 文件数量"""
+        self.md_lines: list = []
+        """markdown 文件代码行数"""
+        self.code_files: list = []
+        """代码文件数量"""
+        self.code_lines: list = []
+        """代码文件代码行数"""
+        self.code_comments: list = []
+        """代码文件注释行数"""
+        self.develop_time = (datetime.datetime.now(pytz.utc) - parse_datetime(get_repo_s_info(self.owner_name, self.repo_name)["created_at"])).days
+        """已经开发了多长时间"""
+        self.fork_count: list = []
+        """fork 数量"""
+        self.release_count: list = []
+        """release 数量"""
+        self.download_count: list = []
+        """下载数量"""
+
+
     def get_repo_basic_data(self):
         """表-1的数据: star 数"""
         if self.added_star_count == []:
@@ -76,7 +107,7 @@ class repo:
         if self.all_commits is None:
             self.all_commits = pd.read_csv(preprocess_git_log_data(self.owner_name, self.repo_name))
         if self.sliced_commits == []:
-            self.sliced_commits, self.slice_rules = slice_all_commit_data(self.owner_name, self.repo_name, window_size=conf["window_size"], step_length=conf["step_size"])
+            self.sliced_commits, self.slice_rules, self.slice_rules_by_sha = slice_all_commit_data(self.owner_name, self.repo_name, window_size=conf["window_size"], step_length=conf["step_size"])
         if self.modefied_file_count_in_total == []:
             self.modefied_file_count_in_total = [sum(int(commit["file_count"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
         if self.modefied_file_count_on_ave == []:
@@ -91,13 +122,13 @@ class repo:
         if self.all_issues is None:
             self.all_issues = get_all_issues(self.owner_name, self.repo_name)
         if self.created_issues == []:
-            self.created_issues, self.closed_issues, self.lable_counts_in_total = get_sliced_issues(self.owner_name, self.repo_name, self.slice_rules)
+            self.created_issues, self.closed_issues, self.lable_counts_in_total, self.reopened_issues = get_sliced_issues(self.owner_name, self.repo_name, self.slice_rules)
         if self.lable_counts_on_ave == []:
             self.lable_counts_on_ave = [(self.lable_counts_in_total[j] / self.created_issues[j] 
                                          if not self.created_issues[j] == 0 else 0) 
                                          for j in range(len(self.created_issues))]
             
-        return self.created_issues, self.closed_issues, self.lable_counts_on_ave
+        return self.created_issues, self.closed_issues, self.lable_counts_on_ave, self.reopened_issues
 
     def get_pr_data(self):
         """表4的数据: 新建的 PR 数、关闭的 PR 数"""
@@ -129,6 +160,18 @@ class repo:
         
         return list(self.truck_factor["truckfactor"].to_dict().values()), self.core_developers_focus_rate
 
+    def get_code_analysis_data(self):
+        """表5的数据: markdown 文件数量、markdown 文件代码行数、代码文件数量、代码文件代码行数 和 代码文件注释行数"""
+
+        if self.md_files == [] or self.code_files == []:
+            self.md_files, self.md_lines, self.code_files, self.code_lines, self.code_comments = get_code_analysis(self.owner_name, self.repo_name, self.slice_rules_by_sha)
+        if self.fork_count == []:
+            self.fork_count = get_sliced_forks(self.owner_name, self.repo_name, self.slice_rules)
+        if self.release_count == []:
+            self.release_count, self.download_count = get_sliced_releases(self.owner_name, self.repo_name, self.slice_rules)
+
+        return self.md_files, self.md_lines, self.code_files, self.code_lines, self.code_comments, self.fork_count, self.release_count, self.download_count
+
     def __str__(self) -> str:
         try:
             str = "%s/%s\n" % (self.owner_name, self.repo_name)
@@ -152,6 +195,16 @@ class repo:
             str += "created_prs ([n]): %s" % self.created_prs + "\n"
             str += "closed_prs ([n]): %s" % self.closed_prs + "\n"
             str += "pr_length ([n]): %s" % [f"{num:.2f}" for num in self.pr_length] + "\n"
+            str += "md_files ([n]): %s" % self.md_files + "\n"
+            str += "md_lines ([n]): %s" % self.md_lines + "\n"
+            str += "code_files ([n]): %s" % self.code_files + "\n"
+            str += "code_lines ([n]): %s" % self.code_lines + "\n"
+            str += "code_comments ([n]): %s" % self.code_comments + "\n"
+            str += "develop_time (days): %d" % self.develop_time + "\n"
+            str += "fork_count ([n]): %s" % self.fork_count + "\n"
+            str += "release_count ([n]): %s" % self.release_count + "\n"
+            str += "download_count ([n]): %s" % self.download_count + "\n"
+
         except Exception:
             raise Exception("Data not initialized, please get them first")
 
@@ -178,6 +231,15 @@ class repo:
                 "Created PRs": self.created_prs,
                 "Closed PRs": self.closed_prs,
                 "PR Length": [f"{num:.2f}" for num in self.pr_length],
+                "Markdown Files": self.md_files,
+                "Markdown Lines": self.md_lines,
+                "Code Files": self.code_files,
+                "Code Lines": self.code_lines,
+                "Code Comments": self.code_comments,
+                "Develop Time": self.develop_time,
+                "Fork Count": self.fork_count,
+                "Release Count": self.release_count,
+                "Download Count": self.download_count
 
             }
         except Exception as e:
@@ -190,6 +252,7 @@ class repo:
         self.get_code_data()
         self.get_social_data()
         self.get_pr_data()
+        self.get_code_analysis_data()
 
     def out_put_to_log(self):
         logger.info(self.__str__())

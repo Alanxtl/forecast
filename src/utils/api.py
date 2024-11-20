@@ -4,7 +4,9 @@ from src.config import Config as config
 
 conf = config.get_config()
 
-headers = {"Authorization": conf["token"], 
+
+def get_headers():
+    return {"Authorization": conf["token"], 
            "Accept": "application/vnd.github+json",
            "X-GitHub-Api-Version": "2022-11-28"}
 
@@ -16,19 +18,19 @@ def query_graphql(query):
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
     
 def query_api(url: str):
-    request = requests.get(url, headers=headers)
+    request = requests.get(url, headers=get_headers())
     # print(url)
     if request.status_code == 200 or request.status_code == 304:
         return request.json()
-    if request.status_code == 409 or request.status_code == 404 or request.status_code == 403:
+    if request.status_code == 409 or request.status_code == 404:
         return []
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, url))
-    
-query_star_headers = {"Authorization": conf["token"], 
-           "Accept": "application/vnd.github.v3.star+json"}
 
 def query_star(url: str):
+    query_star_headers = {"Authorization": conf["token"], 
+           "Accept": "application/vnd.github.v3.star+json"}
+    
     request = requests.get(url, headers=query_star_headers)
     # print(url)
     if request.status_code == 200 or request.status_code == 304:
@@ -52,7 +54,7 @@ def get_html(url):
 
 def get_rate_limit():
     """获取 GitHub API 的速率限制信息."""
-    response = requests.get("https://api.github.com/rate_limit", headers=headers)
+    response = requests.get("https://api.github.com/rate_limit", headers=get_headers())
     
     if response.status_code == 200:
         rate_limit_info = response.json()
