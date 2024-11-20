@@ -1,6 +1,5 @@
 import os
 import csv
-import tempfile
 import subprocess
 from pathlib import Path    
 from datetime import datetime, timedelta
@@ -14,8 +13,8 @@ from src.utils.evo_log_to_csv import convert
 from src.utils.repair_git_move import repair
 from src.utils.git_funcs import clone_to_tmp
 
-TMP = tempfile.gettempdir()
 conf = config.get_config()
+TMP = conf["temp_path"]
 
 @DeprecationWarning
 def get_all_commits(owner_name, repo_name):

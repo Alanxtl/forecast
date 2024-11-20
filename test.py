@@ -5,7 +5,7 @@ import streamlit as st
 from src.dataset import repo
 from src.config import Config as config
 from src.utils.repair_git_move import repair
-from src.utils.api import query_star
+from src.utils.api import query_star, query_api, get_rate_limit
 from src.crawler.fetcher.star import get_sliced_stars, get_repo_s_all_stars
 from src.crawler.fetcher.pr import get_repo_all_prs
 from src.crawler.fetcher.repo import get_repo_s_info
@@ -26,10 +26,9 @@ if not os.path.exists(conf["log_path"]):
     os.mkdir(conf["log_path"])
 
 if __name__ == "__main__":
-    hertzbeat = repo("apache", "hertzbeat")
-    hertzbeat.update()
 
-    print(hertzbeat.develop_time)
+
+    print(query_api("https://api.github.com/users/aias00/events?per_page=100&page=4"))
 
 
 # ab3f51d883d0c0909bc92a31e599bea3e69a8c06

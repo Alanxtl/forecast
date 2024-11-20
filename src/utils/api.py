@@ -11,7 +11,7 @@ def get_headers():
            "X-GitHub-Api-Version": "2022-11-28"}
 
 def query_graphql(query):
-    request = requests.post('https://api.github.com/graphql', json={'query': query}, headers=headers)
+    request = requests.post('https://api.github.com/graphql', json={'query': query}, headers=get_headers())
     if request.status_code == 200:
         return request.json()
     else:

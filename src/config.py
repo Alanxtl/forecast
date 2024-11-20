@@ -1,6 +1,10 @@
 from calendar import c
 import configparser
+import os
+import tempfile
 from loguru import logger
+
+TMP = tempfile.gettempdir()
 
 class Config:
     config = {}
@@ -12,6 +16,7 @@ class Config:
             Config.config["data_path"] = self.config_parsor.get("DEFAULT","data_path")
             Config.config["raw_data_path"] = self.config_parsor.get("DEFAULT","raw_data_path")
             Config.config["predict_data_path"] = self.config_parsor.get("DEFAULT","predict_data_path")
+            Config.config["temp_path"] = os.path.join(tempfile.gettempdir(), self.config_parsor.get("DEFAULT","temp_path"))
             Config.config["log_path"] = self.config_parsor.get("DEFAULT","log_path")
             Config.config["token"] = self.config_parsor.get("token","token")
             Config.config["window_size"] = int(self.config_parsor.get("VAR","window_size"))

@@ -1,6 +1,5 @@
 from typing import Tuple
 import os
-import tempfile
 import subprocess
 from pathlib import Path
 import uuid    
@@ -12,8 +11,8 @@ import pandas as pd
 from src.config import Config as config
 from src.utils.git_funcs import clone_to_tmp
 
-TMP = tempfile.gettempdir()
 conf = config.get_config()
+TMP = conf["temp_path"]
 
 def analysis_code(owner_name, repo_name, end_sha) -> Tuple[dict, dict]:
     path_to_repo = r"https://github.com/" + f"{owner_name}/{repo_name}" + r".git"
