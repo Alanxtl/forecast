@@ -15,9 +15,7 @@ More on the truck factor:
   * https://legacy.python.org/search/hypermail/python-1994q2/1040.html
 """
 
-import os
 import re
-import tempfile
 from typing import Tuple
 
 from loguru import logger
@@ -27,7 +25,9 @@ from src.crawler.fetcher.commits import preprocess_git_log_data
 from src.utils.datetime_parser import parse_datetime
 from src.config import Config as config
 
-TMP = tempfile.gettempdir()
+conf = config.get_config()
+TMP = conf["temp_path"]
+
 
 def create_file_owner_data(df):
     """Currently, we count up how many lines each author added per file.

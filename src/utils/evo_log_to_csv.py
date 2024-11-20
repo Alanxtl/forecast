@@ -65,7 +65,7 @@ def convert(report_file, out_path):
                 commit_blocks.append(commit_block[:])
                 commit_block = []
     # out_file = f"{report_file}.csv"
-    # out_path = os.path.join(tempfile.gettempdir(), out_file)
+    # out_path = 
 
     count = 0
     with open(out_path, "w", encoding="utf-8") as fp:

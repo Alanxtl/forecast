@@ -1,7 +1,6 @@
 import ast
 import os
 import re
-import tempfile
 from pathlib import Path
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
@@ -16,7 +15,8 @@ from src.utils.git_funcs import clone_to_tmp
 from src.utils.evo_log_to_csv import convert
 from src.utils.repair_git_move import repair
 
-TMP = tempfile.gettempdir()
+conf = config.get_config()
+TMP = conf["temp_path"]
 
 def contains_chinese_or_space(s):
     # 使用正则表达式检测中文字符或空格

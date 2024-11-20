@@ -5,13 +5,15 @@ The original file is written by HelgeCPH (https://github.com/HelgeCPH/truckfacto
 import os
 import subprocess
 import uuid
-import tempfile
 from pathlib import Path
 from urllib.parse import urlparse
 
 from loguru import logger
 
-TMP = tempfile.gettempdir()
+from src.config import Config as config
+
+conf = config.get_config()
+TMP = conf["temp_path"]
 
 repos = {}
 
