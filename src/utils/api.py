@@ -18,12 +18,11 @@ def query_graphql(query):
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, query))
     
 def query_api(url: str):
+
     request = requests.get(url, headers=get_headers())
     # print(url)
     if request.status_code == 200 or request.status_code == 304:
         return request.json()
-    if request.status_code == 409 or request.status_code == 404:
-        return []
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, url))
 
@@ -35,8 +34,6 @@ def query_star(url: str):
     # print(url)
     if request.status_code == 200 or request.status_code == 304:
         return [i["starred_at"] for i in request.json()]
-    if request.status_code == 409:
-        return []
     else:
         raise Exception("Query failed to run by returning code of {}. {}".format(request.status_code, url))
     

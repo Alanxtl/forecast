@@ -47,6 +47,7 @@ def convert(report_file, out_path):
     commit_blocks = []
     commit_block = []
     for idx, line in enumerate(lines):
+        # print(line)
         line = line.rstrip()
         if idx + 1 < len(lines):
             next_line = lines[idx + 1].rstrip()

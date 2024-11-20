@@ -16,6 +16,7 @@ More on the truck factor:
 """
 
 import os
+import re
 import tempfile
 from typing import Tuple
 
@@ -97,8 +98,8 @@ def compute_truck_factor(df, freq_df) -> Tuple[int, pd.DataFrame]:
 def compute(owner_name, repo_name, slice_rules):
     file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_truckfactor.csv"
 
-    if os.path.exists(file):
-        return pd.read_csv(file)
+    # if os.path.exists(file):
+        # return pd.read_csv(file)
 
     evo_log_csv = preprocess_git_log_data(owner_name, repo_name)
     complete_df = pd.read_csv(evo_log_csv)
@@ -114,9 +115,21 @@ def compute(owner_name, repo_name, slice_rules):
         truckfactor, authors = compute_truck_factor(owner_df, owner_freq_df)
 
         list.append({"truckfactor": truckfactor, "authors": authors.tolist()})
-    
+
+    # 定义检测中文或空格的函数
+    def contains_chinese_or_space(s):
+        pattern = re.compile(r'[\u4e00-\u9fff\s]')
+        return bool(pattern.search(s))
+
+    # 定义处理函数，删除符合条件的元素
+    def remove_chinese_or_space(lst):
+        return [item for item in lst if not contains_chinese_or_space(item)]
+
+    # 应用处理函数到 DataFrame
     df = pd.DataFrame(list)
-    df.to_csv(file, index=False)
+    df['authors'] = df['authors'].apply(remove_chinese_or_space)
+    
+    # df.to_csv(file, index=False)
 
     logger.info(f"Write {len(df)} commits to {file}")
 

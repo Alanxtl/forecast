@@ -1,5 +1,6 @@
 import ast
 import os
+import re
 import tempfile
 from pathlib import Path
 import subprocess
@@ -17,22 +18,24 @@ from src.utils.repair_git_move import repair
 
 TMP = tempfile.gettempdir()
 
+def contains_chinese_or_space(s):
+    # 使用正则表达式检测中文字符或空格
+    pattern = re.compile(r'[\u4e00-\u9fff\s]')
+    return bool(pattern.search(s))
+
 def get_developer_s_all_repos(name): 
     """获取某人所有的 repo"""
     file = config.get_config()["raw_data_path"] + f"/{name}_s_all_repos.txt"
 
     if os.path.exists(file):
         with open(file, mode='r', newline='', encoding='utf-8') as file:
-            try:
-                reader = file.readline()
-                all_repos = ast.literal_eval(reader)
-            finally:
-                file.close()
+            reader = file.readline()
+            all_repos = ast.literal_eval(reader)
 
             return all_repos
 
 
-    url_repos = 'https://api.github.com/users/{name}/repos'.format(name=name)
+    url_repos = r'https://api.github.com/users/' + name + r'/repos'
     json_data = query_api(url_repos)
 
     all_repos = [] # repos's name数据存放数组
@@ -45,10 +48,7 @@ def get_developer_s_all_repos(name):
         raise Exception(e)
 
     with open(file, mode='w', newline='', encoding='utf-8') as file:
-        try:
-            file.write(str(all_repos))
-        finally:
-            file.close()
+        file.write(str(all_repos))
 
     return all_repos
 
@@ -69,7 +69,7 @@ def write_git_log_to_file_author(owner_name, repo_name, name):
 
     return outfile
 
-def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name, email):
+def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
     csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if os.path.exists(csv_file):
@@ -82,9 +82,12 @@ def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name, em
     df = pd.read_csv(evo_log, parse_dates=["date"], na_values=["-", "", "\"-\""])
 
     # 过滤出指定开发者的提交
-    email_prefix = email.split('@')[0]
-    df = df[(df["author_email"].str.split('@').str[0] == email_prefix) | 
-            (df["committer_email"].str.split('@').str[0] == email_prefix)]
+    df = df[(df["author_email"].str.split('@').str[0] == name) | 
+            (df["committer_email"].str.split('@').str[0] == name) |
+            (df["author_name"] == name) |
+            (df["committer_name"] == name)]
+    
+    df.to_csv(evo_log, index=False)
     
     logger.info(f"Write {len(df)} commits to {evo_log}")
 

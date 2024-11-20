@@ -11,6 +11,8 @@ from src.utils.datetime_parser import parse_datetime
 
 def totalPages(owner_name, repo_name) -> int:
     query_url = f'https://api.github.com/repos/{owner_name}/{repo_name}/pulls?state=all&per_page=1&page=1'
+    if query_api(query_url) == []:
+        return 0
     response = query_api(query_url)[0]["number"]
     return response / 100
 

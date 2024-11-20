@@ -119,7 +119,7 @@ def write_git_log_to_file(owner_name, repo_name):
 
     cmd = (
         f"git -C {p} log "
-        r'--pretty=format:"\"%H\",\"%an\",\"%ae\",\"%aI\",\"%f\"" '
+        r'--pretty=format:"\"%H\",\"%an\",\"%ae\",\"%cn\",\"%ce\",\"%aI\",\"%f\"" '
         f"--date=short --numstat > {outfile}"
     )
 
