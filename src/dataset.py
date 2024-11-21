@@ -3,7 +3,7 @@ import pandas as pd
 from loguru import logger
 import pytz
 
-from src.crawler.fetcher.commits import preprocess_git_log_data, slice_all_commit_data
+from src.crawler.fetcher.commits import preprocess_git_log_data, slice_all_commit_data, get_bot_commits, slice_bot_commit_data
 from src.crawler.fetcher.issues import get_all_issues, get_sliced_issues
 from src.crawler.fetcher.pr import get_repo_all_prs, get_sliced_prs
 from src.crawler.fetcher.star import get_sliced_stars
@@ -27,8 +27,12 @@ class repo:
 
         self.all_commits = None
         """所有的commit"""
+        self.all_commits_from_bots = None
+        """所有来自机器人的commit"""
         self.sliced_commits: list = []
-        """新增的commit数量"""
+        """切片后的commit数量"""
+        self.sliced_commits_from_bots : list = []
+        """切片后的机器人commit数量"""
         self.slice_rules: list = []
         """时间切片方法"""
         self.slice_rules_by_sha: list = []
@@ -106,8 +110,12 @@ class repo:
 
         if self.all_commits is None:
             self.all_commits = pd.read_csv(preprocess_git_log_data(self.owner_name, self.repo_name))
+        if self.all_commits_from_bots is None:
+            self.all_commits_from_bots = pd.read_csv(get_bot_commits(self.owner_name, self.repo_name))
         if self.sliced_commits == []:
             self.sliced_commits, self.slice_rules, self.slice_rules_by_sha = slice_all_commit_data(self.owner_name, self.repo_name, window_size=conf["window_size"], step_length=conf["step_size"])
+        if self.sliced_commits_from_bots == []:
+            self.sliced_commits_from_bots = slice_bot_commit_data(self.owner_name, self.repo_name, self.slice_rules)
         if self.modefied_file_count_in_total == []:
             self.modefied_file_count_in_total = [sum(int(commit["file_count"]) if not commit["added"] == '-' else 0 for commit in slice) for slice in self.sliced_commits] 
         if self.modefied_file_count_on_ave == []:
@@ -115,7 +123,7 @@ class repo:
                                             if not len(self.sliced_commits[j]) == 0 else 0)
                                             for j in range(len(self.sliced_commits))]
             
-        return [len(commits) for commits in self.sliced_commits], self.modefied_file_count_on_ave
+        return [len(commits) for commits in self.sliced_commits], self.modefied_file_count_on_ave, [len(commits) for commits in self.sliced_commits_from_bots]
             
     def get_issue_data(self):
         """表1的数据: 新建的 issue 数、关闭的 issue 数 和 issue label 数"""
@@ -156,7 +164,7 @@ class repo:
         if self.truck_factor is None:
             self.truck_factor = compute(self.owner_name, self.repo_name, self.slice_rules)
         if self.core_developers_focus_rate == []:
-            self.core_developers_focus_rate = calc_ave_focus_rate(self.truck_factor, self.repo_name, self.slice_rules)
+            self.core_developers_focus_rate = calc_ave_focus_rate(self.truck_factor, self.owner_name, self.repo_name, self.slice_rules)
         
         return list(self.truck_factor["truckfactor"].to_dict().values()), self.core_developers_focus_rate
 

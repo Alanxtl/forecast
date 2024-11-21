@@ -13,7 +13,7 @@ from src.utils.api import query_api
 from src.utils.datetime_parser import parse_datetime
 from src.utils.git_funcs import clone_to_tmp
 from src.utils.evo_log_to_csv import convert
-from src.utils.repair_git_move import repair
+from src.utils.repair_git_move import simple, repair
 
 conf = config.get_config()
 TMP = conf["temp_path"]
@@ -43,7 +43,8 @@ def get_developer_s_all_repos(name):
     try:
         for item in json_data:
             repo = item['name']
-            all_repos.append(repo)
+            owner_name, repo_name = check_fork(name, repo)
+            all_repos.append(f"{owner_name}/{repo_name}")
     except Exception as e:
         raise Exception(e)
 
@@ -69,8 +70,16 @@ def write_git_log_to_file_author(owner_name, repo_name, name):
 
     return outfile
 
-def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
-    csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+def check_fork(owner_name, repo_name):
+    url = f"https://api.github.com/repos/{owner_name}/{repo_name}"
+    json_data = query_api(url)
+    if json_data["fork"]:
+        return json_data["parent"]["owner"]["login"], json_data["parent"]["name"]
+    else:
+        return owner_name, repo_name
+
+def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name, name_set, email_set):
+    csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if os.path.exists(csv_file):
         return csv_file
@@ -79,13 +88,16 @@ def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
     evo_log = convert(evo_log, csv_file)
     evo_log = repair(evo_log)
     
+    to_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+    evo_log = simple(to_file)
+    
     df = pd.read_csv(evo_log, parse_dates=["date"], na_values=["-", "", "\"-\""])
 
     # 过滤出指定开发者的提交
-    df = df[(df["author_email"].str.split('@').str[0] == name) | 
-            (df["committer_email"].str.split('@').str[0] == name) |
-            (df["author_name"] == name) |
-            (df["committer_name"] == name)]
+    df = df[(df["author_email"].isin(email_set)) | 
+            (df["committer_email"].isin(email_set)) |
+            (df["author_name"].isin(name_set)) |
+            (df["committer_name"].isin(name_set))]
     
     df.to_csv(evo_log, index=False)
     
@@ -93,16 +105,62 @@ def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
 
     return evo_log
 
+def get_developer_s_all_alias(name):
+    """获取某人所有的邮箱"""
+    file = config.get_config()["raw_data_path"] + f"/{name}_s_all_alias.txt"
+    
+
+    if os.path.exists(file):
+        with open(file, mode='r', newline='', encoding='utf-8') as file:
+            reader = file.readline()
+            all_names = ast.literal_eval(reader)
+            reader = file.readline()
+            all_emails = ast.literal_eval(reader)
+
+            return all_names, all_emails
+
+    url_emails = r'https://api.github.com/users/' + name + r'/events/public'
+    json_data = query_api(url_emails)
+
+    all_emails = set()  # 使用 set 来存储邮箱以去重
+    all_names = set()   # 使用 set 来存储名字以去重
+
+    all_names.add(name)
+
+    try:
+        for item in json_data:
+            if item['type'] == 'PushEvent':
+                all_names.add(item['actor']['login'])
+                all_names.add(item['actor']['display_login'])
+            elif item['type'] == 'IssueCommentEvent':
+                all_names.add(item['actor']['login'])
+                all_names.add(item['actor']['display_login'])
+            elif item['type'] == 'IssuesEvent':
+                all_names.add(item['actor']['login'])
+                all_names.add(item['actor']['display_login'])
+            else:
+                continue
+
+    except Exception as e:
+        raise Exception(e)
+
+    with open(file, mode='w', newline='', encoding='utf-8') as file:
+        file.write(str(all_names))
+        file.write('\n')
+        file.write(str(all_emails))
+
+    return all_names, all_emails
+
 def get_sliced_commits(owner_name, repo_name, slice_rules, name) -> list:
     # 读取 CSV 文件
     csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
 
     if not os.path.exists(csv_file):
-        get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name)
+        name_set, email_set = get_developer_s_all_alias(name)
+        get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name, name_set, email_set)
 
     df = pd.read_csv(csv_file, na_values=["-", "", "\"-\""])
 
-    # 转换 createdAt 和 closedAt 列
     df['date'] = df['date'].apply(lambda x: parse_datetime(x))
     
     # 存储每个切片的数量
@@ -132,7 +190,7 @@ def get_sliced_commits_on_all_repos(name, slice_rules):
 
     # 定义一个函数以便在多线程中使用
     def process_repo(repo):
-        counts = get_sliced_commits(name, repo, slice_rules, name)
+        counts = get_sliced_commits(repo.split("/")[0], repo.split("/")[1], slice_rules, name)
         results[repo] = counts
 
     # 使用 ThreadPoolExecutor 进行多线程处理
@@ -148,14 +206,14 @@ def get_sliced_commits_on_all_repos(name, slice_rules):
 
     return df
 
-def calc_developers_focuse_rate_on_repo(name, repo_name, slice_rules):
+def calc_developers_focuse_rate_on_repo(name, owner_name, repo_name, slice_rules):
 
     df = get_sliced_commits_on_all_repos(name, slice_rules)
 
     # 计算每行指定仓库数据占所有数据的比重
     total_counts = df.sum(axis=1)  # 每行的总和
     try:
-        repo_counts = df[repo_name]  # 指定仓库的数据
+        repo_counts = df[f"{owner_name}/{repo_name}"]  # 指定仓库的数据
     except KeyError:
         return [0] * len(slice_rules)
 
@@ -165,7 +223,7 @@ def calc_developers_focuse_rate_on_repo(name, repo_name, slice_rules):
 
     return proportions.to_list()
 
-def calc_ave_focus_rate(truck_factor, repo_name, slice_rules):
+def calc_ave_focus_rate(truck_factor, owner_name, repo_name, slice_rules):
     authors = truck_factor["authors"]
     results = []
 
@@ -175,7 +233,7 @@ def calc_ave_focus_rate(truck_factor, repo_name, slice_rules):
         list_results = []
         
         for i in author:
-            counts = calc_developers_focuse_rate_on_repo(i, repo_name, slice_rules)
+            counts = calc_developers_focuse_rate_on_repo(i, owner_name, repo_name, slice_rules)
             list_results.append(counts)
         
         df = pd.DataFrame(list_results).T

@@ -155,6 +155,8 @@ def repair(log_csv_name):
         'new': lambda x: list(x.dropna()),      # 合并 'new' 字段为列表，去除 NaN
         'author_name': 'first',         # 保留第一个 author_name
         'author_email': 'first',        # 保留第一个 author_email
+        'committer_name': 'first',        # 保留第一个 author_email
+        'committer_email': 'first',        # 保留第一个 author_email
         'date': 'first',                # 保留第一个 date
         'message': 'first',             # 保留第一个 message
         'file_count': 'size'            # 计算每组的行数
@@ -168,6 +170,37 @@ def repair(log_csv_name):
     logger.info(f"Repair {log_csv_name}")
 
     return log_csv_name
+
+def simple(log_csv_name):
+    df = pd.read_csv(log_csv_name, na_values=["-", "", "\"-\""])
+    df["date"] = df["date"].apply(lambda x: parse_datetime(x))
+    if df.empty:
+        return log_csv_name
+    df["added"] = df["added"].fillna("0").astype(int)
+    df["removed"] = df["removed"].fillna("0").astype(int)
+
+    df["current"] = df.fname
+
+    df = df.drop(columns=['message', 'added', 'removed', 'fname', 'current', 'old', 'new', 'file_count', 'message']) 
+    
+    # 进行分组，基于 'hash' 字段
+    df = df.groupby('hash').agg({
+        'author_name': 'first',         # 保留第一个 author_name
+        'author_email': 'first',        # 保留第一个 author_email
+        'committer_name': 'first',        # 保留第一个 author_email
+        'committer_email': 'first',        # 保留第一个 author_email
+        'date': 'first',                # 保留第一个 date
+    }).reset_index()
+
+    # 根据 date 字段排序
+    df = df.sort_values(by='date', ascending=False)
+
+    df.to_csv(log_csv_name, index=False)
+
+    logger.info(f"Repair {log_csv_name}")
+
+    return log_csv_name
+
 
 if __name__ == "__main__":
     repair(sys.argv[1])

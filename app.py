@@ -1,4 +1,5 @@
 import os
+import random
 from sys import flags
 import threading
 import time
@@ -40,9 +41,10 @@ with col2:
         predict_size = st.number_input("Predict Size (Months)", min_value=1, value=conf["predict_size"])
 
 # 创建一个字典来存储数据
+pics = 6
 data = {}
 threads = []
-flags = [True] * 6
+flags = [True] * pics
 
 def add_threads(key: str, func):
     threads.append(threading.Thread(target=fetch, args=(key, func)))
@@ -68,15 +70,22 @@ def generate_chart_options(title, legend_data, x_data, y_axes, series_data):
 
 if st.button("Fetch Data"):
 
+    # 创建侧边栏
+    sidebar = st.sidebar.title("Progress")
+
+    progress_bars = []
+    status_texts = []
+
+    for i in range(pics + 1):
+        # 在侧边栏中创建进度条
+        status_text = st.sidebar.empty()  # 用于显示状态文本
+        status_texts.append(status_text)
+        progress_bar = st.sidebar.progress(0)
+        progress_bars.append(progress_bar)
+
     config.set_size(window_size, step_size, predict_size)
 
     if owner_name and repo_name:
-        state = 0
-        progress_bar = st.progress(state)  # 创建进度条
-        status_text = st.empty()  # 用于显示状态文本
-
-        state += 5     
-        progress_bar.progress(state)
 
         # 创建 Repo 实例
         repo = Repo(owner_name, repo_name)
@@ -91,18 +100,21 @@ if st.button("Fetch Data"):
         add_threads("pr_data", repo.get_pr_data)
         add_threads("code_ana_data", repo.get_code_analysis_data)
 
-        status_text.text("Fetching data... Please wait.")
 
+        progress_bars[0].progress(30)  # 更新进度条
+        status_texts[0].markdown(f"Cloning repo")  # 更新状态文本
+        
         fetch("commit_data", repo.get_commit_data)
 
         slice_starts = [str(rule[0].date()) + "~" + str(rule[1].date()) for rule in repo.slice_rules]
-        state += 20
-        progress_bar.progress(state)
+
+        progress_bars[0].progress(100)
+        status_texts[0].markdown(f"Repo clone **:green[Success]**")  # 更新状态文本
 
         # 图表-1
         options0 = generate_chart_options(
             "Commit Data",
-            ["Commits", "Modified File Count on Average"],
+            ["Commits", "Commits From Bots", "Modified File Count on Average"],
             slice_starts,
             [
                 {"type": "value", "name": "Commits (n)", "position": "left"},
@@ -110,6 +122,7 @@ if st.button("Fetch Data"):
             ],
             [
                 {"name": "Commits", "type": "line", "data": data["commit_data"][0], "yAxisIndex": 0},
+                {"name": "Commits From Bots", "type": "line", "data": data["commit_data"][2], "yAxisIndex": 0},
                 {"name": "Modified File Count on Average", "type": "line", "data": data["commit_data"][1], "yAxisIndex": 1},
             ]
         )
@@ -121,14 +134,25 @@ if st.button("Fetch Data"):
 
         lock = threading.Lock()
 
+        t = 0
+
         while any(flags):
-            time.sleep(0.1)
+            t += 1
+            time.sleep(1)
             # print(flags)
 
+            for j in range(1, pics + 1):
+                if flags[j - 1]:
+                    progress_bars[j].progress(min(90, t + 10 + random.randint(0, 10)))
+
             # 图表0
-            if not threads[0].is_alive() and flags[0]:
-                state += 10
-                progress_bar.progress(state)
+            this = 0
+            if flags[this]:
+                status_texts[this + 1].markdown(f"Fetching Repo Basic Data")
+            if not threads[this].is_alive() and flags[this]:
+                progress_bars[this + 1].progress(100)
+                time.sleep(0.3)
+                status_texts[this + 1].markdown("Fetching Repo Basic Data" + " **:green[Done]**")
                 opt0 = generate_chart_options(
                     "Repo Basic Data",
                     ["Stars"],
@@ -139,15 +163,19 @@ if st.button("Fetch Data"):
 
                 st_echarts(options=opt0, height="400px", key="Repo_Basic_Data")
                 with lock:
-                    flags[0] = False
-
+                    flags[this] = False
+                    
             # 图表1
-            if not threads[1].is_alive() and flags[1]:
-                state += 10
-                progress_bar.progress(state)
+            this = 1
+            if flags[this]:
+                status_texts[this + 1].markdown(f"Fetching Issue Data")
+            if not threads[this].is_alive() and flags[this]:
+                progress_bars[this + 1].progress(100)
+                time.sleep(0.3)
+                status_texts[this + 1].markdown("Fetching Issue Data" + " **:green[Done]**")
                 opt1 = generate_chart_options(
                     "Issue Data",
-                    ["Created Issues", "Closed Issues", "Issue Label Counts on Average"],
+                    ["Created Issues", "Closed Issues", "Reopened Issues", "Issue Label Counts on Average"],
                     slice_starts,
                     [
                         {"type": "value", "name": "Issues (n)", "position": "left"},
@@ -163,12 +191,16 @@ if st.button("Fetch Data"):
 
                 st_echarts(options=opt1, height="400px", key="Issue_Data")
                 with lock:
-                    flags[1] = False
+                    flags[this] = False
 
             # 表2
-            if not threads[2].is_alive() and flags[2]:
-                state += 10
-                progress_bar.progress(state)
+            this = 2
+            if flags[this]:
+                status_texts[this + 1].markdown(f"Fetching Code Data")
+            if not threads[this].is_alive() and flags[this]:
+                progress_bars[this + 1].progress(100)
+                time.sleep(0.3)
+                status_texts[this + 1].markdown("Fetching Code Data" + " **:green[Done]**")
                 opt2 = generate_chart_options(
                     "Code Data",
                     ["Added Code Line", "Removed Code Line"],
@@ -183,12 +215,16 @@ if st.button("Fetch Data"):
                 # 绘制线图
                 st_echarts(options=opt2, height="400px", key="Code_Data")
                 with lock:
-                    flags[2] = False
-
+                    flags[this] = False
+                    
             # 表3
-            if not threads[3].is_alive() and flags[3]:
-                state += 10
-                progress_bar.progress(state)
+            this = 3
+            if flags[this]:
+                status_texts[this + 1].markdown(f"Fetching Social Data")
+            if not threads[this].is_alive() and flags[this]:
+                progress_bars[this + 1].progress(100)
+                time.sleep(0.3)
+                status_texts[this + 1].markdown("Fetching Social Data" + " **:green[Done]**")
                 opt3 = generate_chart_options(
                     "Social Data",
                     ["Truck Factor", "Core Developers' Focus Rate"],
@@ -203,12 +239,16 @@ if st.button("Fetch Data"):
                 # 绘制线图
                 st_echarts(options=opt3, height="400px", key="Social_Data")
                 with lock:
-                    flags[3] = False
+                    flags[this] = False
 
             # 表4
-            if not threads[4].is_alive() and flags[4]:
-                state += 10
-                progress_bar.progress(state)
+            this = 4
+            if flags[this]:
+                status_texts[this + 1].markdown(f"Fetching PR Data")
+            if not threads[this].is_alive() and flags[this]:
+                progress_bars[this + 1].progress(100)
+                time.sleep(0.3)
+                status_texts[this + 1].markdown("Fetching PR Data" + " **:green[Done]**")
                 opt4 = generate_chart_options(
                     "PR Data",
                     ["Created PRs", "Closed PRs", "PR Handled Time On Average"],
@@ -227,12 +267,16 @@ if st.button("Fetch Data"):
                 # 绘制线图
                 st_echarts(options=opt4, height="400px", key="pr_data")
                 with lock:
-                    flags[4] = False
-
+                    flags[this] = False
+                    
             # 表5
-            if not threads[5].is_alive() and flags[5]:
-                state += 10
-                progress_bar.progress(state)
+            this = 5
+            if flags[this]:
+                status_texts[this + 1].markdown(f"Fetching Code Data")
+            if not threads[this].is_alive() and flags[this]:
+                progress_bars[this + 1].progress(100)
+                time.sleep(0.3)
+                status_texts[this + 1].markdown("Fetching Code Data" + " **:green[Done]**")
                 opt5 = generate_chart_options(
                     "Code Data",
                     ["md_files", "md_lines", "code_files", "code_lines", "code_comments"],
@@ -250,8 +294,6 @@ if st.button("Fetch Data"):
                     ]
                 )
 
-                state += 5
-                progress_bar.progress(state)
                 opt6 = generate_chart_options(
                     "Fork Data",
                     ["Forks"],
@@ -264,8 +306,6 @@ if st.button("Fetch Data"):
                     ]
                 )
 
-                state += 5
-                progress_bar.progress(state)
                 opt7 = generate_chart_options(
                     "Release Data",
                     ["Releases", "Download Counts"],
@@ -285,13 +325,12 @@ if st.button("Fetch Data"):
                 st_echarts(options=opt6, height="400px", key="fork_data")
                 st_echarts(options=opt7, height="400px", key="release_data")
                 with lock:
-                    flags[5] = False
+                    flags[this] = False
+                    
 
         for thread in threads:
             thread.join()
 
-        progress_bar.empty()  # 清空进度条
-        status_text.empty()  # 清空状态文本
 
         repo.out_put_to_log()
 

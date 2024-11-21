@@ -2,7 +2,6 @@ from typing import Tuple
 import os
 import subprocess
 from pathlib import Path
-import uuid    
 import ast
 
 from loguru import logger
@@ -16,17 +15,14 @@ TMP = conf["temp_path"]
 
 def analysis_code(owner_name, repo_name, end_sha) -> Tuple[dict, dict]:
     path_to_repo = r"https://github.com/" + f"{owner_name}/{repo_name}" + r".git"
-    outfile = os.path.join(TMP, f"{owner_name}_{repo_name}_cloc_{str(uuid.uuid4())}.csv")
+    outfile = os.path.join(TMP, f"{owner_name}_{repo_name}_cloc_{end_sha}.csv")
 
-    p = Path(clone_to_tmp(path_to_repo))
+    if not os.path.exists(outfile):
 
-    cmd = (
-        f"cd {p} && cloc {end_sha} --csv --quiet --out {outfile} && cd -" 
-    )
-
-    subprocess.run(cmd, shell=True)
-
-    logger.info(f"cloc {p} to {outfile}")
+        p = Path(clone_to_tmp(path_to_repo))
+        cmd = f"cd {p} && cloc {end_sha} --csv --quiet --out {os.path.abspath(outfile)} && cd -" 
+        subprocess.run(cmd, shell=True)
+        logger.info(f"cloc {p} to {outfile}")
 
     df = pd.read_csv(outfile)
 

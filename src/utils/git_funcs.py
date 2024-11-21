@@ -4,7 +4,6 @@ The original file is written by HelgeCPH (https://github.com/HelgeCPH/truckfacto
 
 import os
 import subprocess
-import uuid
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -42,7 +41,13 @@ def clone_to_tmp(url):
 
     path = Path(urlparse(url).path)
     outdir = path.name.removesuffix(path.suffix)
-    git_repo_dir = os.path.join(TMP, outdir + str(uuid.uuid4()))
+
+    git_repo_dir = os.path.join(TMP, outdir)
+
+    if os.path.exists(git_repo_dir):
+        repos[url] = git_repo_dir
+        return git_repo_dir
+    
     cmd = f"git clone {url} {git_repo_dir} > /dev/null 2>&1"
     logger.info(cmd)
     subprocess.run(cmd, shell=True)
