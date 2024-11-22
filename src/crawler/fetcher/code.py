@@ -14,7 +14,7 @@ conf = config.get_config()
 TMP = conf["temp_path"]
 
 def analysis_code(owner_name, repo_name, end_sha) -> Tuple[dict, dict]:
-    path_to_repo = r"https://github.com/" + f"{owner_name}/{repo_name}" + r".git"
+    path_to_repo = f"{owner_name}/{repo_name}" + r".git"
     outfile = os.path.join(TMP, f"{owner_name}_{repo_name}_cloc_{end_sha}.csv")
 
     if not os.path.exists(outfile):
@@ -47,7 +47,7 @@ def read_code_analysis_from_file(file_path: str) -> Tuple[list, list, list, list
     return md_files, md_lines, code_files, code_lines, code_comments
     
 def write_code_analysis_to_file(owner_name, repo_name, slice_rules) -> Tuple[list, list, list, list, list]:
-    path_to_repo = r"https://github.com/" + f"{owner_name}/{repo_name}" + r".git"
+    path_to_repo = f"{owner_name}/{repo_name}" + r".git"
     p = Path(clone_to_tmp(path_to_repo))
 
     md_files: list = []

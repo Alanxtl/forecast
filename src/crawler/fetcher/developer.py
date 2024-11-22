@@ -54,7 +54,7 @@ def get_developer_s_all_repos(name):
     return all_repos
 
 def write_git_log_to_file_author(owner_name, repo_name, name):
-    path_to_repo = r"https://github.com/" + f"{owner_name}/{repo_name}" + r".git"
+    path_to_repo = f"{owner_name}/{repo_name}" + r".git"
     
     p = Path(clone_to_tmp(path_to_repo))
 
@@ -153,7 +153,7 @@ def get_developer_s_all_alias(name):
 
 def get_sliced_commits(owner_name, repo_name, slice_rules, name) -> list:
     # 读取 CSV 文件
-    csv_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+    csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
         name_set, email_set = get_developer_s_all_alias(name)
@@ -196,7 +196,7 @@ def get_sliced_commits_on_all_repos(name, slice_rules):
     # 使用 ThreadPoolExecutor 进行多线程处理
     with ThreadPoolExecutor(max_workers=config.get_config()["inner_parrallel"]) as executor:
         executor.map(process_repo, repos)
-
+    
     # 将结果转换为 DataFrame
     df = pd.DataFrame.from_dict(results, orient='index').T
 

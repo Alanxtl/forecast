@@ -48,7 +48,7 @@ def clone_to_tmp(url):
         repos[url] = git_repo_dir
         return git_repo_dir
     
-    cmd = f"git clone {url} {git_repo_dir} > /dev/null 2>&1"
+    cmd = f"git clone git@github.com:{url} {git_repo_dir}"
     logger.info(cmd)
     subprocess.run(cmd, shell=True)
 

@@ -3,6 +3,7 @@
 ## Prerequisites
 
 1. Install git
+2. Adding [SSH](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/adding-a-new-ssh-key-to-your-github-account) key to your GitHub account
 2. Install [cloc](https://github.com/AlDanial/cloc?tab=readme-ov-file#install-via-package-manager)
 
 ## Used APIs

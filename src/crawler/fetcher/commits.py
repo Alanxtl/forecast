@@ -17,11 +17,14 @@ conf = config.get_config()
 TMP = conf["temp_path"]
 
 def write_git_log_to_file(owner_name, repo_name):
-    path_to_repo = r"https://github.com/" + f"{owner_name}/{repo_name}" + r".git"
+    path_to_repo = f"{owner_name}/{repo_name}" + r".git"
     
     p = Path(clone_to_tmp(path_to_repo))
 
     outfile = os.path.join(TMP, p.name + "_evo.log")
+
+    if os.path.exists(outfile):
+        return outfile
 
     cmd = (
         f"git -C {p} log "

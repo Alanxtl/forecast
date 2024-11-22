@@ -143,7 +143,7 @@ if st.button("Fetch Data"):
 
             for j in range(1, pics + 1):
                 if flags[j - 1]:
-                    progress_bars[j].progress(min(90, t + 10 + random.randint(0, 10)))
+                    progress_bars[j].progress(min(90, t + 10 + random.randint(0, 3)))
 
             # 图表0
             this = 0

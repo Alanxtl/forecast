@@ -2,6 +2,7 @@
 The original file is written by HelgeCPH (https://github.com/HelgeCPH/truckfactor)
 """
 
+import os
 import re
 from loguru import logger
 
@@ -30,6 +31,7 @@ def parse_numstat_block(commit_line, block):
 
 
 def convert(report_file, out_path):
+
     try:
         # In some rare cases UTF-8 characters, such as `ø` cannot be decoded
         # correctly. Even though, the `file` tool reports the log file as utf-8
