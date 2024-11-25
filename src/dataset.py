@@ -1,4 +1,6 @@
 import datetime
+from os import wait
+import os
 import pandas as pd
 from loguru import logger
 import pytz
@@ -15,6 +17,7 @@ from src.crawler.fetcher.fork import get_sliced_forks
 from src.crawler.fetcher.release import get_sliced_releases
 from src.config import Config as config
 from src.utils.datetime_parser import parse_datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 conf = config.get_config()
@@ -24,6 +27,9 @@ class repo:
     def __init__(self, owner_name, repo_name):
         self.owner_name = owner_name
         self.repo_name = repo_name
+
+        self.target: list = []
+        """预测的目标"""
 
         self.all_commits = None
         """所有的commit"""
@@ -87,7 +93,9 @@ class repo:
         """代码文件代码行数"""
         self.code_comments: list = []
         """代码文件注释行数"""
-        self.develop_time = (datetime.datetime.now(pytz.utc) - parse_datetime(get_repo_s_info(self.owner_name, self.repo_name)["created_at"])).days
+        self.display_develop_time = (datetime.datetime.now(pytz.utc) - parse_datetime(get_repo_s_info(self.owner_name, self.repo_name)["created_at"])).days
+        """已经开发了多长时间"""
+        self.develop_time: list = []
         """已经开发了多长时间"""
         self.fork_count: list = []
         """fork 数量"""
@@ -113,7 +121,7 @@ class repo:
         if self.all_commits_from_bots is None:
             self.all_commits_from_bots = pd.read_csv(get_bot_commits(self.owner_name, self.repo_name))
         if self.sliced_commits == []:
-            self.sliced_commits, self.slice_rules, self.slice_rules_by_sha = slice_all_commit_data(self.owner_name, self.repo_name, window_size=conf["window_size"], step_length=conf["step_size"])
+            self.sliced_commits, self.slice_rules, self.slice_rules_by_sha, self.target = slice_all_commit_data(self.owner_name, self.repo_name, window_size=conf["window_size"], step_length=conf["step_size"])
         if self.sliced_commits_from_bots == []:
             self.sliced_commits_from_bots = slice_bot_commit_data(self.owner_name, self.repo_name, self.slice_rules)
         if self.modefied_file_count_in_total == []:
@@ -122,6 +130,9 @@ class repo:
             self.modefied_file_count_on_ave = [(self.modefied_file_count_in_total[j] / len(self.sliced_commits[j])
                                             if not len(self.sliced_commits[j]) == 0 else 0)
                                             for j in range(len(self.sliced_commits))]
+        if self.develop_time == []:
+            self.develop_time = [(i[1] - parse_datetime(get_repo_s_info(self.owner_name, self.repo_name)["created_at"])).days for i in self.slice_rules]
+            
             
         return [len(commits) for commits in self.sliced_commits], self.modefied_file_count_on_ave, [len(commits) for commits in self.sliced_commits_from_bots]
             
@@ -196,7 +207,7 @@ class repo:
             # str += "modefied_file_count ([n]): %s" % self.modefied_file_count + "\n"
             str += "modefied_file_count_on_ave ([n]): %s" % '[' + ", ".join(f"{num:.2f}" for num in self.modefied_file_count_on_ave) + ']' + "\n"
             str += "added_star_count ([n]): %s" % self.added_star_count + "\n"
-            str += "truck_factor (n): %s" % list(self.truck_factor["truckfactor"].to_dict().keys()) + "\n"
+            str += "truck_factor (n): %s" % list(self.truck_factor["truckfactor"].to_dict().values()) + "\n"
             str += "core_developers (n): %s" % list(self.truck_factor["authors"].to_dict().values()) + "\n"
             str += "core_developers_focus_rate ([n]): %s" % self.core_developers_focus_rate + "\n"
             # str += "pr_in_total (n): %s" % self.all_prs + "\n"
@@ -208,7 +219,7 @@ class repo:
             str += "code_files ([n]): %s" % self.code_files + "\n"
             str += "code_lines ([n]): %s" % self.code_lines + "\n"
             str += "code_comments ([n]): %s" % self.code_comments + "\n"
-            str += "develop_time (days): %d" % self.develop_time + "\n"
+            str += "develop_time (days): %d" % self.display_develop_time + "\n"
             str += "fork_count ([n]): %s" % self.fork_count + "\n"
             str += "release_count ([n]): %s" % self.release_count + "\n"
             str += "download_count ([n]): %s" % self.download_count + "\n"
@@ -233,7 +244,7 @@ class repo:
                 "Removed Code Lines": self.removed_code_line,
                 "Modified File Count on Average": [f"{num:.2f}" for num in self.modefied_file_count_on_ave],
                 "Added Star Count": self.added_star_count,
-                "Truck Factor": list(self.truck_factor["truckfactor"].to_dict().keys()),
+                "Truck Factor": list(self.truck_factor["truckfactor"].to_dict().values()),
                 "Core Developers": list(self.truck_factor["authors"].to_dict().values()),
                 "Core Developers Focus Rate": [f"{num:.2f}" for num in self.core_developers_focus_rate],
                 "Created PRs": self.created_prs,
@@ -244,11 +255,10 @@ class repo:
                 "Code Files": self.code_files,
                 "Code Lines": self.code_lines,
                 "Code Comments": self.code_comments,
-                "Develop Time": self.develop_time,
+                "Develop Time": self.display_develop_time,
                 "Fork Count": self.fork_count,
                 "Release Count": self.release_count,
                 "Download Count": self.download_count
-
             }
         except Exception as e:
             raise Exception("Data not initialized, please get them first")
@@ -264,3 +274,63 @@ class repo:
 
     def out_put_to_log(self):
         logger.info(self.__str__())
+
+    def to_dataset(self):
+        self.get_commit_data()
+        with ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(self.get_issue_data): 'issue_data',
+                executor.submit(self.get_pr_data): 'pr_data',
+                executor.submit(self.get_code_data): 'code_data',
+                executor.submit(self.get_social_data): 'social_data',
+                executor.submit(self.get_code_analysis_data): 'code_analysis_data',
+                executor.submit(self.get_repo_basic_data): 'repo_basic_data'
+            }
+            
+            # Wait for all futures to complete
+            for future in as_completed(futures):
+                try:
+                    result = future.result()  # This will raise an exception if the thread failed
+                except Exception as e:
+                    print(f"An error occurred: {e}")
+
+        data = {
+            "Commit Count": [len(commits) for commits in self.sliced_commits],
+            "Modified File Count (Average)": self.modefied_file_count_on_ave,
+            "Created Issues": self.created_issues,
+            "Closed Issues": self.closed_issues,
+            "Label Counts (Average)": self.lable_counts_on_ave,
+            "Reopened Issues": self.reopened_issues,
+            "Created PRs": self.created_prs,
+            "Closed PRs": self.closed_prs,
+            "PR Length": self.pr_length,
+            "Added Code Lines": self.added_code_line,
+            "Removed Code Lines": self.removed_code_line,
+            "Truck Factor": list(self.truck_factor["truckfactor"].to_dict().values()),
+            "Markdown Files": self.md_files,
+            "Markdown Lines": self.md_lines,
+            "Code Files": self.code_files,
+            "Code Lines": self.code_lines,
+            "Code Comments": self.code_comments,
+            "Fork Count": self.fork_count,
+            "Release Count": self.release_count,
+            "Download Count": self.download_count,
+            "Develop Time": self.develop_time,
+            "Target": self.target
+        }
+
+        # Convert the dictionary to a DataFrame
+        df = pd.DataFrame(data)
+
+        df_a = df.sample(frac=0.9, random_state=42)  # 90% 随机选择
+        df_b = df.drop(df_a.index)  # 剩余的 10%
+
+        # 检查文件是否存在
+        train_file = config.get_config()["predict_data_path"] + f"/train.csv"
+        test_file = config.get_config()["predict_data_path"] + f"/test.csv"
+
+        file_exists = os.path.isfile(train_file)
+        df_a.to_csv(train_file, mode='a', index=False, header=not file_exists)
+
+        file_exists = os.path.isfile(test_file)
+        df_b.to_csv(test_file, mode='a', index=False, header=not file_exists)

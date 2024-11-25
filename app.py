@@ -3,7 +3,6 @@ import random
 from sys import flags
 import threading
 import time
-from unittest import result
 
 import streamlit as st
 from streamlit_echarts import st_echarts
@@ -89,7 +88,7 @@ if st.button("Fetch Data"):
 
         # 创建 Repo 实例
         repo = Repo(owner_name, repo_name)
-        st.subheader(f":blue[{owner_name}/{repo_name}] has developed for :green[{repo.develop_time}] days!", divider=True)
+        st.subheader(f":blue[{owner_name}/{repo_name}] has developed for :green[{repo.display_develop_time}] days!", divider=True)
         
 
         # 创建线程来并行加载数据

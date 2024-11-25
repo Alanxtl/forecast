@@ -20,7 +20,7 @@ def query_graphql(query):
 def query_api(url: str):
 
     request = requests.get(url, headers=get_headers())
-    # print(url)
+    # print(request)
     if request.status_code == 200 or request.status_code == 304:
         return request.json()
     else:

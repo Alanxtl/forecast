@@ -3,9 +3,10 @@ import os
 import re
 from pathlib import Path
 import subprocess
-from concurrent.futures import ThreadPoolExecutor
-
+import ast
 import pandas as pd
+from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
 from loguru import logger
 
 from src.config import Config as config
@@ -78,7 +79,7 @@ def check_fork(owner_name, repo_name):
     else:
         return owner_name, repo_name
 
-def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name, name_set, email_set):
+def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
     csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if os.path.exists(csv_file):
@@ -91,17 +92,7 @@ def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name, na
     to_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
     evo_log = simple(to_file)
     
-    df = pd.read_csv(evo_log, parse_dates=["date"], na_values=["-", "", "\"-\""])
-
-    # 过滤出指定开发者的提交
-    df = df[(df["author_email"].isin(email_set)) | 
-            (df["committer_email"].isin(email_set)) |
-            (df["author_name"].isin(name_set)) |
-            (df["committer_name"].isin(name_set))]
-    
-    df.to_csv(evo_log, index=False)
-    
-    logger.info(f"Write {len(df)} commits to {evo_log}")
+    logger.info(f"Write {len(evo_log)} commits to {evo_log}")
 
     return evo_log
 
@@ -155,9 +146,12 @@ def get_sliced_commits(owner_name, repo_name, slice_rules, name) -> list:
     # 读取 CSV 文件
     csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
+    name_set, email_set = get_developer_s_all_alias(name)
+
+    logger.info(f"Getting {name}'s commits on {owner_name}/{repo_name}")
+
     if not os.path.exists(csv_file):
-        name_set, email_set = get_developer_s_all_alias(name)
-        get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name, name_set, email_set)
+        get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name)
 
     df = pd.read_csv(csv_file, na_values=["-", "", "\"-\""])
 
@@ -167,7 +161,18 @@ def get_sliced_commits(owner_name, repo_name, slice_rules, name) -> list:
     counts = []
     
     for start_date, end_date in slice_rules:
-        count = df[(df['date'] >= start_date) & (df['date'] < end_date)].shape[0]
+        filter = df[(df['date'] >= start_date) & 
+                   (df['date'] < end_date)]
+
+
+        # 过滤出指定开发者的提交
+        filter = filter[(filter["author_email"].isin(email_set)) | 
+                       (filter["committer_email"].isin(email_set)) |
+                       (filter["author_name"].isin(name_set)) |
+                       (filter["committer_name"].isin(name_set))]
+
+        count = filter.shape[0]
+
         counts.append(count)
 
     return counts
@@ -224,25 +229,39 @@ def calc_developers_focuse_rate_on_repo(name, owner_name, repo_name, slice_rules
     return proportions.to_list()
 
 def calc_ave_focus_rate(truck_factor, owner_name, repo_name, slice_rules):
+    # 获取所有作者列表
     authors = truck_factor["authors"]
-    results = []
+    
+    # 用于保存每个作者的计算结果，避免重复计算
+    author_cache = {}
+    
+    # 提取所有作者并去重
+    unique_authors = set()
+    for author_list in authors:
+        author_list = ast.literal_eval(str(author_list))
+        for author in author_list:
+            unique_authors.add(author)
 
+    # 定义处理单个作者的函数
     def process_author(author):
-        author = str(author)
-        author = ast.literal_eval(author)
-        list_results = []
-        
-        for i in author:
-            counts = calc_developers_focuse_rate_on_repo(i, owner_name, repo_name, slice_rules)
-            list_results.append(counts)
-        
-        df = pd.DataFrame(list_results).T
-        return df.mean(axis=1).tolist()
+        counts = calc_developers_focuse_rate_on_repo(author, owner_name, repo_name, slice_rules)
+        author_cache[author] = counts  # 将结果缓存起来
+        return counts
 
+    # 使用多线程计算去重后的所有作者的结果
     with ThreadPoolExecutor(max_workers=config.get_config()["inner_parrallel"]) as executor:
-        # 使用列表推导式提交任务并收集结果
-        results = list(executor.map(process_author, authors))
+        executor.map(process_author, unique_authors)
 
+    # 将结果映射回原始的作者列表
+    results = []
+    for author_list in authors:
+        author_list = ast.literal_eval(str(author_list))
+        list_results = [author_cache[author] for author in author_list]
+        
+        # 计算当前作者列表的平均值
+        df = pd.DataFrame(list_results).T
+        results.append(df.mean(axis=1).tolist())
+
+    # 将所有结果转换为 DataFrame，并计算最终的平均值
     df = pd.DataFrame(results)
-
     return df.mean(axis=0).tolist()

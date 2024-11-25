@@ -74,6 +74,7 @@ def get_sliced_issues(owner_name, repo_name, slice_rules):
     # 读取 CSV 文件
     df = get_all_issues(owner_name, repo_name)
 
+
     # 转换 createdAt 和 closedAt 列
     df['created_at'] = df['created_at'].apply(parse_datetime)
     df['updated_at'] = df['updated_at'].apply(lambda x: None if pd.isna(x) else parse_datetime(x))
@@ -104,5 +105,7 @@ def get_sliced_issues(owner_name, repo_name, slice_rules):
         filter = df[(df['updated_at'] >= start_date) & (df['updated_at'] < end_date)]
         reopen = filter[filter['state_reason'] == 'reopened'].shape[0]
         reopen_counts.append(reopen)
+    
+
 
     return created_counts, close_counts, lable_counts, reopen_counts

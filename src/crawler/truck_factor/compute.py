@@ -129,7 +129,7 @@ def compute(owner_name, repo_name, slice_rules):
     df = pd.DataFrame(list)
     df['authors'] = df['authors'].apply(remove_chinese_or_space)
     
-    # df.to_csv(file, index=False)
+    df.to_csv(file, index=False)
 
     logger.info(f"Write {len(df)} commits to {file}")
 

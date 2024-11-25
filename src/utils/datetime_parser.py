@@ -14,7 +14,7 @@ def parse_datetime(time_string: str) -> datetime:
                 parsed_time = datetime.strptime(time_string, "%Y-%m-%dT%H:%M:%SZ")
                 return parsed_time
             except ValueError:
-                raise ValueError("Incorrect time format")
+                raise ValueError(f"Incorrect time format {time_string}")
     
 if __name__ == "__main__":
     print(parse_datetime("2024-11-11 23:19:15+09:00"))

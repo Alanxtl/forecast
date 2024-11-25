@@ -70,7 +70,7 @@ def get_bot_commits(owner_name, repo_name):
 
     return csv_file
 
-def slice_all_commit_data(owner_name, repo_name, window_size: int = conf["window_size"], step_length: int = conf["step_size"]):
+def slice_all_commit_data(owner_name, repo_name, window_size: int = conf["window_size"], step_length: int = conf["step_size"], target_size: int = conf["predict_size"]):
     csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if not os.path.exists(csv_file):
@@ -84,21 +84,26 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = conf["window
             file.close()
 
     slices = []
+    target = []
     slice_rules = []
     slice_rules_by_sha = []
     total_commits = len(commits)
     window_days = window_size * 30
     step_days = step_length * 30
+    target_days = target_size * 30
 
     # reverse
     current_ptr = total_commits - 1
 
     while current_ptr >= 0:
         slice_commits = []
+        target_commits = []
         current_start_date = parse_datetime(commits[current_ptr]["date"])
         current_end_date = current_start_date + timedelta(days = window_days)
         next_date = current_start_date + timedelta(days = step_days)
+        target_end_date = current_start_date + timedelta(days = target_days)
         next_ptr = current_ptr
+
 
         while parse_datetime(commits[current_ptr]["date"]) < current_end_date and current_ptr >= 0:
             if parse_datetime(commits[current_ptr]["date"]) < next_date:
@@ -109,12 +114,25 @@ def slice_all_commit_data(owner_name, repo_name, window_size: int = conf["window
 
             current_ptr -= 1
 
+        target_ptr = current_ptr
+
+        while parse_datetime(commits[target_ptr]["date"]) < target_end_date and target_ptr >= 0:
+            target_commits.append(commits[target_ptr])
+            target_ptr -= 1
+
         slices.append(slice_commits)
+        target.append([i["date"] for i in target_commits])
+
         slice_rules_by_sha.append([slice_commits[0]['hash'], slice_commits[-1]['hash']])
         slice_rules.append([current_start_date, current_end_date])
+
         current_ptr = next_ptr
 
-    return slices, slice_rules, slice_rules_by_sha
+    df = pd.DataFrame(target).T
+        
+    target = count_entries_by_month(df)
+
+    return slices, slice_rules, slice_rules_by_sha, target
 
 def slice_bot_commit_data(owner_name, repo_name, slice_rules):
     csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits_from_bots.csv"
@@ -132,3 +150,22 @@ def slice_bot_commit_data(owner_name, repo_name, slice_rules):
         slices.append(slice_commits)
 
     return slices
+
+def count_entries_by_month(df: pd.DataFrame):
+    # 创建一个空的 DataFrame 存储每月计数
+    monthly_counts = []
+
+    # 对每一列进行按月计数
+    for column in df.columns:
+        valid_dates = df[column].dropna()
+        valid_dates = valid_dates.apply(lambda x : parse_datetime(x))  # 使用 'coerce' 处理无效日期
+        valid_dates = pd.to_datetime(valid_dates, errors='coerce')
+
+        valid_dates = valid_dates.dt.tz_localize(None)
+        
+        monthly_count = valid_dates.dt.to_period('M').value_counts().sort_index()
+
+        # 将计数结果添加到 monthly_counts DataFrame
+        monthly_counts.append(monthly_count.to_list())
+
+    return monthly_counts
