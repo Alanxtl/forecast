@@ -1,6 +1,5 @@
 from calendar import c
 import configparser
-import os
 import tempfile
 from loguru import logger
 
@@ -24,6 +23,7 @@ class Config:
             Config.config["step_size"] = int(self.config_parsor.get("VAR","step_size"))
             Config.config["api_parrallel"] = int(self.config_parsor.get("code","api_parrallel"))
             Config.config["inner_parrallel"] = int(self.config_parsor.get("code","inner_parrallel"))
+            Config.config["clone_parrallel"] = int(self.config_parsor.get("code","clone_parrallel"))
 
     @staticmethod
     def get_config():

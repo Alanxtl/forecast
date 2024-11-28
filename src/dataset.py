@@ -289,13 +289,11 @@ class repo:
             
             # Wait for all futures to complete
             for future in as_completed(futures):
-                try:
-                    result = future.result()  # This will raise an exception if the thread failed
-                except Exception as e:
-                    print(f"An error occurred: {e}")
+                future.result()
 
         data = {
             "Commit Count": [len(commits) for commits in self.sliced_commits],
+            "Bot Commit": [len(commits) for commits in self.sliced_commits_from_bots],
             "Modified File Count (Average)": self.modefied_file_count_on_ave,
             "Created Issues": self.created_issues,
             "Closed Issues": self.closed_issues,
@@ -307,6 +305,7 @@ class repo:
             "Added Code Lines": self.added_code_line,
             "Removed Code Lines": self.removed_code_line,
             "Truck Factor": list(self.truck_factor["truckfactor"].to_dict().values()),
+            "Core Developers Focus Rate": self.core_developers_focus_rate,
             "Markdown Files": self.md_files,
             "Markdown Lines": self.md_lines,
             "Code Files": self.code_files,
@@ -316,14 +315,21 @@ class repo:
             "Release Count": self.release_count,
             "Download Count": self.download_count,
             "Develop Time": self.develop_time,
+            "Star": self.added_star_count,
             "Target": self.target
         }
 
         # Convert the dictionary to a DataFrame
+        correct_length = len(self.slice_rules)
+        for i in data:
+            if len(data[i]) != correct_length:
+                data[i] = [0] * correct_length
         df = pd.DataFrame(data)
 
         df_a = df.sample(frac=0.9, random_state=42)  # 90% 随机选择
         df_b = df.drop(df_a.index)  # 剩余的 10%
+
+        print(df)
 
         # 检查文件是否存在
         train_file = config.get_config()["predict_data_path"] + f"/train.csv"

@@ -1,9 +1,12 @@
 config.ini
 pyrightconfig.json
-data/
+data/raw
+data/temp
+data/predict/*.csv
 log/
 .vscode/
 .streamlit/
+a.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

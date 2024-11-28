@@ -34,3 +34,6 @@ clean:
 cleanrawdata:
 	@echo "Cleaning data directory..."
 	@find ./data/raw -type f | xargs rm -rf
+
+builddata:
+	python ./src/builder/dataset_builder.py

@@ -23,8 +23,8 @@ def write_git_log_to_file(owner_name, repo_name):
 
     outfile = os.path.join(TMP, p.name + "_evo.log")
 
-    if os.path.exists(outfile):
-        return outfile
+    # if os.path.exists(outfile):
+        # return outfile
 
     cmd = (
         f"git -C {p} log "

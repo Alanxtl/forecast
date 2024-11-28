@@ -1,4 +1,5 @@
 from concurrent.futures import ThreadPoolExecutor
+from math import e
 import os
 import threading
 
@@ -43,7 +44,8 @@ def get_repo_s_all_releases(owner_name, repo_name) -> pd.DataFrame:
 
     # 写入 CSV 文件
     df = pd.DataFrame(rets, columns=["created_at", "published_at", "assets", "author"])  # 根据需要调整列
-    df["author"] = df["author"].apply(lambda x: x["login"])  # 从用户对象中提取登录名
+
+    df["author"] = df["author"].apply(lambda x: "null" if x is None else x["login"])  # 从用户对象中提取登录名
     df["assets"] = df["assets"].apply(lambda x: sum([i['download_count'] for i in x]) )  # 从用户对象中提取登录名
 
     df.to_csv(csv_file, index=False, encoding='utf-8')

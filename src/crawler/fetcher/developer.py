@@ -6,7 +6,6 @@ import subprocess
 import ast
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
-from collections import defaultdict
 from loguru import logger
 
 from src.config import Config as config
@@ -54,7 +53,7 @@ def get_developer_s_all_repos(name):
 
     return all_repos
 
-def write_git_log_to_file_author(owner_name, repo_name, name):
+def write_git_log_to_file_author(owner_name, repo_name):
     path_to_repo = f"{owner_name}/{repo_name}" + r".git"
     
     p = Path(clone_to_tmp(path_to_repo))
@@ -79,18 +78,17 @@ def check_fork(owner_name, repo_name):
     else:
         return owner_name, repo_name
 
-def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name):
+def get_developer_s_all_commits_on_specific_repo(owner_name, repo_name):
     csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
     if os.path.exists(csv_file):
         return csv_file
 
-    evo_log = write_git_log_to_file_author(owner_name, repo_name, name)
+    evo_log = write_git_log_to_file_author(owner_name, repo_name)
     evo_log = convert(evo_log, csv_file)
     evo_log = repair(evo_log)
     
-    to_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
-    evo_log = simple(to_file)
+    evo_log = simple(evo_log)
     
     logger.info(f"Write {len(evo_log)} commits to {evo_log}")
 
@@ -143,6 +141,12 @@ def get_developer_s_all_alias(name):
     return all_names, all_emails
 
 def get_sliced_commits(owner_name, repo_name, slice_rules, name) -> list:
+
+    to_file = config.get_config()["raw_data_path"] + f"/{name}_s_commits_on_{owner_name}_{repo_name}.csv"
+
+    if os.path.exists(to_file):
+        return pd.read_csv(to_file).iloc[:, 0].to_list()
+
     # 读取 CSV 文件
     csv_file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
 
@@ -151,7 +155,7 @@ def get_sliced_commits(owner_name, repo_name, slice_rules, name) -> list:
     logger.info(f"Getting {name}'s commits on {owner_name}/{repo_name}")
 
     if not os.path.exists(csv_file):
-        get_developer_s_all_commits_on_specific_repo(owner_name, repo_name, name)
+        get_developer_s_all_commits_on_specific_repo(owner_name, repo_name)
 
     df = pd.read_csv(csv_file, na_values=["-", "", "\"-\""])
 
@@ -163,17 +167,19 @@ def get_sliced_commits(owner_name, repo_name, slice_rules, name) -> list:
     for start_date, end_date in slice_rules:
         filter = df[(df['date'] >= start_date) & 
                    (df['date'] < end_date)]
-
-
+        
         # 过滤出指定开发者的提交
-        filter = filter[(filter["author_email"].isin(email_set)) | 
-                       (filter["committer_email"].isin(email_set)) |
+        filter = filter[(filter["author_email"].apply(lambda x: x.split("@")[0]).isin(email_set)) | 
+                       (filter["committer_email"].apply(lambda x: x.split("@")[0]).isin(email_set)) |
                        (filter["author_name"].isin(name_set)) |
                        (filter["committer_name"].isin(name_set))]
 
         count = filter.shape[0]
-
         counts.append(count)
+
+    pd.DataFrame(counts).to_csv(to_file, index=False)
+
+    logger.info(f"Write {len(counts)} commits to {to_file}")
 
     return counts
 
@@ -199,7 +205,7 @@ def get_sliced_commits_on_all_repos(name, slice_rules):
         results[repo] = counts
 
     # 使用 ThreadPoolExecutor 进行多线程处理
-    with ThreadPoolExecutor(max_workers=config.get_config()["inner_parrallel"]) as executor:
+    with ThreadPoolExecutor(max_workers=config.get_config()["clone_parrallel"]) as executor:
         executor.map(process_repo, repos)
     
     # 将结果转换为 DataFrame
@@ -230,6 +236,7 @@ def calc_developers_focuse_rate_on_repo(name, owner_name, repo_name, slice_rules
 
 def calc_ave_focus_rate(truck_factor, owner_name, repo_name, slice_rules):
     # 获取所有作者列表
+    # print(truck_factor)
     authors = truck_factor["authors"]
     
     # 用于保存每个作者的计算结果，避免重复计算

@@ -15,6 +15,7 @@ More on the truck factor:
   * https://legacy.python.org/search/hypermail/python-1994q2/1040.html
 """
 
+import os
 import re
 from typing import Tuple
 
@@ -70,7 +71,7 @@ def create_file_owner_data(df):
 
     return owner_df, owner_freq_df
 
-def compute_truck_factor(df, freq_df) -> Tuple[int, pd.DataFrame]:
+def compute_truck_factor(df, freq_df) -> Tuple[int, list]:
     """Similar to G. Avelino et al.
     [*A novel approach for estimating Truck Factors*](https://ieeexplore.ieee.org/stamp)/stamp.jsp?arnumber=7503718)
     we remove low-contributing authors from the dataset as long as still more
@@ -93,13 +94,13 @@ def compute_truck_factor(df, freq_df) -> Tuple[int, pd.DataFrame]:
             count += 1
 
     truckfactor = len(freq_df.main_dev) - count
-    return truckfactor, freq_df.iloc[idx:].main_dev
+    return truckfactor, freq_df.iloc[idx:].main_dev.tolist()
 
 def compute(owner_name, repo_name, slice_rules):
     file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_truckfactor.csv"
 
-    # if os.path.exists(file):
-        # return pd.read_csv(file)
+    if os.path.exists(file):
+        return pd.read_csv(file)
 
     evo_log_csv = preprocess_git_log_data(owner_name, repo_name)
     complete_df = pd.read_csv(evo_log_csv)
@@ -114,7 +115,7 @@ def compute(owner_name, repo_name, slice_rules):
         owner_df, owner_freq_df = create_file_owner_data(df)
         truckfactor, authors = compute_truck_factor(owner_df, owner_freq_df)
 
-        list.append({"truckfactor": truckfactor, "authors": authors.tolist()})
+        list.append({"truckfactor": truckfactor, "authors": authors})
 
     # 定义检测中文或空格的函数
     def contains_chinese_or_space(s):
@@ -125,9 +126,12 @@ def compute(owner_name, repo_name, slice_rules):
     def remove_chinese_or_space(lst):
         return [item for item in lst if not contains_chinese_or_space(item)]
 
+    df = pd.DataFrame(columns=["truckfactor", "authors"])
+
     # 应用处理函数到 DataFrame
-    df = pd.DataFrame(list)
-    df['authors'] = df['authors'].apply(remove_chinese_or_space)
+    if len(list) != 0:    
+        df = pd.DataFrame(list)
+        df['authors'] = df['authors'].apply(remove_chinese_or_space)
     
     df.to_csv(file, index=False)
 
