@@ -13,6 +13,7 @@
 - Seeno (https://umm.js.org/p/5c5365ec/)
 - HelgeCPH/truckfactor (https://github.com/HelgeCPH/truckfactor)
 - caarlos0/starcharts (https://github.com/caarlos0/starcharts)
+- seart-group/ghs (https://github.com/seart-group/ghs)
   
   ### Used APIs
   
