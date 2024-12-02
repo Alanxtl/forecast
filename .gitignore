@@ -3,6 +3,7 @@ pyrightconfig.json
 data/raw
 data/temp
 data/predict/*.csv
+data/predict/dataset/
 log/
 .vscode/
 .streamlit/
