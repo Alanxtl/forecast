@@ -20,8 +20,20 @@ if not os.path.exists(conf["log_path"]):
     os.mkdir(conf["log_path"])
 
 
+import sys
+import csv
+maxInt = sys.maxsize
 
+while True:
+    try:
+        csv.field_size_limit(maxInt)
+        break
+    except OverflowError:
+        maxInt = int(maxInt/10)
+        
 if __name__ == "__main__":
-    build("/root/workspace/forecast/data/predict/50_100.txt")
+    list = ["./data/predict/" + i + ".csv_out.csv" for i in ["50-100", "100-1k", "1k-5k", "5k-10k", "10k-15k"]]
+    for i in list:
+        build(i)
 
 # ab3f51d883d0c0909bc92a31e599bea3e69a8c06
