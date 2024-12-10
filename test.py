@@ -7,7 +7,7 @@ from src.config import Config as config
 from src.builder.dataset_builder import build, process_repository
 
 conf = config.get_config()
-logger.add(conf["log_path"] + "/{time}.log", level="DEBUG")
+logger.add(conf["log_path"] + "/{time}.log", level="INFO")
 config.set_token(st.secrets["token"])
 
 if not os.path.exists(conf["data_path"]):
@@ -18,6 +18,8 @@ if not os.path.exists(conf["predict_data_path"]):
     os.mkdir(conf["predict_data_path"])
 if not os.path.exists(conf["log_path"]):
     os.mkdir(conf["log_path"])
+if not os.path.exists(conf["dataset_path"]):
+    os.mkdir(conf["dataset_path"])
 
 
 import sys
@@ -32,7 +34,7 @@ while True:
         maxInt = int(maxInt/10)
         
 if __name__ == "__main__":
-    list = ["./data/predict/" + i + ".csv_out.csv" for i in ["50-100", "100-1k", "1k-5k", "5k-10k", "10k-15k"]]
+    list = ["./data/predict/" + i + ".csv" for i in ["LTCs"]]
     for i in list:
         build(i)
 

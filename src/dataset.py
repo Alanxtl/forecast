@@ -117,7 +117,7 @@ class repo:
         这个函数必须第一个执行并且不能并行"""
 
         if self.all_commits is None:
-            self.all_commits = pd.read_csv(preprocess_git_log_data(self.owner_name, self.repo_name))
+            self.all_commits = pd.read_csv(preprocess_git_log_data(self.owner_name, self.repo_name), on_bad_lines='skip')
         if self.all_commits_from_bots is None:
             self.all_commits_from_bots = pd.read_csv(get_bot_commits(self.owner_name, self.repo_name))
         if self.sliced_commits == []:
@@ -131,7 +131,10 @@ class repo:
                                             if not len(self.sliced_commits[j]) == 0 else 0)
                                             for j in range(len(self.sliced_commits))]
         if self.develop_time == []:
-            self.develop_time = [(i[1] - parse_datetime(get_repo_s_info(self.owner_name, self.repo_name)["created_at"])).days for i in self.slice_rules]
+            created_time = parse_datetime(get_repo_s_info(self.owner_name, self.repo_name)["created_at"])
+            first_commit = parse_datetime(self.slice_rules[0][0])
+            first = min(created_time, first_commit)
+            self.develop_time = [(i[1] - first).days for i in self.slice_rules]
             
             
         return [len(commits) for commits in self.sliced_commits], self.modefied_file_count_on_ave, [len(commits) for commits in self.sliced_commits_from_bots]
@@ -174,16 +177,16 @@ class repo:
 
         if self.truck_factor is None:
             self.truck_factor = compute(self.owner_name, self.repo_name, self.slice_rules)
-        if self.core_developers_focus_rate == []:
-            self.core_developers_focus_rate = calc_ave_focus_rate(self.truck_factor, self.owner_name, self.repo_name, self.slice_rules)
+        # if self.core_developers_focus_rate == []:
+            # self.core_developers_focus_rate = calc_ave_focus_rate(self.truck_factor, self.owner_name, self.repo_name, self.slice_rules)
         
         return list(self.truck_factor["truckfactor"].to_dict().values()), self.core_developers_focus_rate
 
     def get_code_analysis_data(self):
         """表5的数据: markdown 文件数量、markdown 文件代码行数、代码文件数量、代码文件代码行数 和 代码文件注释行数"""
 
-        if self.md_files == [] or self.code_files == []:
-            self.md_files, self.md_lines, self.code_files, self.code_lines, self.code_comments = get_code_analysis(self.owner_name, self.repo_name, self.slice_rules_by_sha)
+        # if self.md_files == [] or self.code_files == []:
+        #     self.md_files, self.md_lines, self.code_files, self.code_lines, self.code_comments = get_code_analysis(self.owner_name, self.repo_name, self.slice_rules_by_sha)
         if self.fork_count == []:
             self.fork_count = get_sliced_forks(self.owner_name, self.repo_name, self.slice_rules)
         if self.release_count == []:
@@ -276,6 +279,13 @@ class repo:
         logger.info(self.__str__())
 
     def to_dataset(self):
+        to_file = config.get_config()["dataset_path"] + f"/{self.owner_name}_{self.repo_name}.csv"
+        file_exists = os.path.isfile(to_file)
+
+        if file_exists:
+            return 
+
+
         self.get_commit_data()
         with ThreadPoolExecutor() as executor:
             futures = {
@@ -326,17 +336,21 @@ class repo:
                 data[i] = [0] * correct_length
         df = pd.DataFrame(data)
 
-        df_a = df.sample(frac=0.9, random_state=42)  # 90% 随机选择
-        df_b = df.drop(df_a.index)  # 剩余的 10%
+        # df_a = df.sample(frac=0.9, random_state=42)  # 90% 随机选择
+        # df_b = df.drop(df_a.index)  # 剩余的 10%
 
-        print(df)
+        # print(df)
 
         # 检查文件是否存在
-        train_file = config.get_config()["predict_data_path"] + f"/train.csv"
-        test_file = config.get_config()["predict_data_path"] + f"/test.csv"
+        # train_file = config.get_config()["predict_data_path"] + f"/train.csv"
+        # test_file = config.get_config()["predict_data_path"] + f"/test.csv"
 
-        file_exists = os.path.isfile(train_file)
-        df_a.to_csv(train_file, mode='a', index=False, header=not file_exists)
+        # file_exists = os.path.isfile(train_file)
+        # df_a.to_csv(train_file, mode='a', index=False, header=not file_exists)
+# 
+        # file_exists = os.path.isfile(test_file)
+        # df_b.to_csv(test_file, mode='a', index=False, header=not file_exists)
 
-        file_exists = os.path.isfile(test_file)
-        df_b.to_csv(test_file, mode='a', index=False, header=not file_exists)
+        logger.success(f"Data of {self.owner_name}/{self.repo_name} has been saved to {to_file}")
+        
+        df.to_csv(to_file, mode='a', index=False, header=not file_exists)

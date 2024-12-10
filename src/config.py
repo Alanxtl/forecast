@@ -17,10 +17,11 @@ class Config:
             Config.config["predict_data_path"] = self.config_parsor.get("DEFAULT","predict_data_path")
             Config.config["temp_path"] = self.config_parsor.get("DEFAULT","temp_path")
             Config.config["log_path"] = self.config_parsor.get("DEFAULT","log_path")
+            Config.config["dataset_path"] = self.config_parsor.get("DEFAULT","dataset_path")
             Config.config["token"] = self.config_parsor.get("token","token")
-            Config.config["window_size"] = int(self.config_parsor.get("VAR","window_size"))
+            Config.config["window_size"] = float(self.config_parsor.get("VAR","window_size"))
             Config.config["predict_size"] = int(self.config_parsor.get("VAR","predict_size")) - 1
-            Config.config["step_size"] = int(self.config_parsor.get("VAR","step_size"))
+            Config.config["step_size"] = float(self.config_parsor.get("VAR","step_size"))
             Config.config["api_parrallel"] = int(self.config_parsor.get("code","api_parrallel"))
             Config.config["inner_parrallel"] = int(self.config_parsor.get("code","inner_parrallel"))
             Config.config["clone_parrallel"] = int(self.config_parsor.get("code","clone_parrallel"))

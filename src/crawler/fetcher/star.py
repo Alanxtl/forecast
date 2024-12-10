@@ -14,7 +14,7 @@ def totalPages(owner_name, repo_name) -> int:
     return get_repo_s_info(owner_name, repo_name)["stargazers_count"] / 100
 
 def lastPage(owner_name, repo_name) -> int:
-    return int(totalPages(owner_name, repo_name) + 1)
+    return min(int(totalPages(owner_name, repo_name) + 1), 400)
 
 def get_repo_s_all_stars(owner_name, repo_name) -> pd.DataFrame:
     """获取某库所有的 star 信息"""

@@ -99,8 +99,8 @@ def compute_truck_factor(df, freq_df) -> Tuple[int, list]:
 def compute(owner_name, repo_name, slice_rules):
     file = config.get_config()["raw_data_path"] + f"/{owner_name}_{repo_name}_truckfactor.csv"
 
-    if os.path.exists(file):
-        return pd.read_csv(file)
+    # if os.path.exists(file):
+        # return pd.read_csv(file)
 
     evo_log_csv = preprocess_git_log_data(owner_name, repo_name)
     complete_df = pd.read_csv(evo_log_csv)

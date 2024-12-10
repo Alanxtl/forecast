@@ -38,6 +38,7 @@ def write_git_log_to_file(owner_name, repo_name):
     
 def preprocess_git_log_data(owner_name, repo_name):
     csv_file = conf["raw_data_path"] + f"/{owner_name}_{repo_name}_commits.csv"
+    # print(csv_file)
 
     if os.path.exists(csv_file):
         return csv_file
@@ -55,7 +56,7 @@ def get_bot_commits(owner_name, repo_name):
         return csv_file
     
     all_commit = preprocess_git_log_data(owner_name, repo_name)
-    all_commit = pd.read_csv(all_commit)
+    all_commit = pd.read_csv(all_commit, on_bad_lines='skip')
 
     bot_commits = all_commit[all_commit["author_name"].str.contains(r"\[bot\]", case=False, na=False) | 
                              all_commit["author_email"].str.contains(r"\[bot\]", case=False, na=False) | 

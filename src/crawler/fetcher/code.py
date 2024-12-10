@@ -18,11 +18,10 @@ def analysis_code(owner_name, repo_name, end_sha) -> Tuple[dict, dict]:
     outfile = os.path.join(TMP, f"{owner_name}_{repo_name}_cloc_{end_sha}.csv")
 
     if not os.path.exists(outfile):
-
         p = Path(clone_to_tmp(path_to_repo))
         cmd = f"cd {p} && cloc {end_sha} --csv --quiet --out {os.path.abspath(outfile)} && cd -" 
         subprocess.run(cmd, shell=True)
-        logger.info(f"cloc {p} to {outfile}")
+        logger.debug(f"cloc {p} to {outfile}")
 
     df = pd.read_csv(outfile)
 
@@ -50,19 +49,19 @@ def write_code_analysis_to_file(owner_name, repo_name, slice_rules) -> Tuple[lis
     path_to_repo = f"{owner_name}/{repo_name}" + r".git"
     p = Path(clone_to_tmp(path_to_repo))
 
-    md_files: list = []
-    md_lines: list = []
-    code_files: list = []
-    code_lines: list = []
-    code_comments: list = []
+    md_files: list = [0]
+    md_lines: list = [0]
+    code_files: list = [0]
+    code_lines: list = [0]
+    code_comments: list = [0]
     
     for _, end in slice_rules:
         md, code = analysis_code(owner_name, repo_name, end)
-        md_files.append(md['files'])
-        md_lines.append(md['code'])
-        code_files.append(code['files'])
-        code_lines.append(code['code'])
-        code_comments.append(code['comment'])
+        md_files.append(md['files'] - md_files[-1])
+        md_lines.append(md['code'] - md_lines[-1])
+        code_files.append(code['files'] - code_files[-1])
+        code_lines.append(code['code'] - code_lines[-1])
+        code_comments.append(code['comment'] - code_comments[-1])
 
     file_path = os.path.join(conf["raw_data_path"], f"{owner_name}_{repo_name}_code_ana.csv")
 
@@ -74,6 +73,12 @@ def write_code_analysis_to_file(owner_name, repo_name, slice_rules) -> Tuple[lis
         f.write(str(code_lines) + '\n')
         f.write(str(code_comments) + '\n')
 
+    md_files.pop(0)
+    md_lines.pop(0)
+    code_files.pop(0)
+    code_lines.pop(0)
+    code_comments.pop(0)
+
     logger.info(f"write code analysis to {file_path}")
 
     return md_files, md_lines, code_files, code_lines, code_comments
@@ -81,7 +86,4 @@ def write_code_analysis_to_file(owner_name, repo_name, slice_rules) -> Tuple[lis
 def get_code_analysis(owner_name, repo_name, slice_rules) -> Tuple[list, list, list, list, list]:
     file_path = os.path.join(conf["raw_data_path"], f"{owner_name}_{repo_name}_code_ana.csv")
     
-    if os.path.exists(file_path):
-        return read_code_analysis_from_file(file_path)
-    else:
-        return write_code_analysis_to_file(owner_name, repo_name, slice_rules)
+    return write_code_analysis_to_file(owner_name, repo_name, slice_rules)

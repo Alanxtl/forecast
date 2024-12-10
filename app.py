@@ -24,6 +24,8 @@ if not os.path.exists(conf["predict_data_path"]):
     os.mkdir(conf["predict_data_path"])
 if not os.path.exists(conf["log_path"]):
     os.mkdir(conf["log_path"])
+if not os.path.exists(conf["dataset_path"]):
+    os.mkdir(conf["dataset_path"])
 
 st.title("Repository Data Explorer")
 owner_name = st.text_input("Enter the Owner Name:")
@@ -35,8 +37,8 @@ col1, col2 = st.columns([2, 1])  # 比例1:2，col2会更宽
 with col2:
     with st.expander("Advanced Configuration", expanded=False):
         # st.subheader("Advanced Configuration")
-        window_size = st.number_input("Window Size (Months)", min_value=1, value=conf["window_size"])
-        step_size = st.number_input("Step Size (Months)", min_value=1, max_value=window_size, value=min(conf["step_size"], window_size))
+        window_size = st.number_input("Window Size (Months)", min_value=0.0, value=conf["window_size"], step=0.5)
+        step_size = st.number_input("Step Size (Months)", min_value=0.0, max_value=window_size, value=min(conf["step_size"], window_size), step=0.5)
         predict_size = st.number_input("Predict Size (Months)", min_value=1, value=conf["predict_size"])
 
 # 创建一个字典来存储数据

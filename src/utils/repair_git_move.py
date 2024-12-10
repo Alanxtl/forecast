@@ -14,8 +14,8 @@ def _deconstruct_git_move(fname):
     if "=>" in fname:
         if "{" in fname and "}" in fname:
             start, end = fname.split(" => ")
-            new_piece, tail = end.split("}")
-            head, old_piece = start.split("{")
+            new_piece, tail = end.split("}", 1)
+            head, old_piece = start.split("{", 1)
             old = head + old_piece + tail
             new = head + new_piece + tail
 
@@ -66,7 +66,7 @@ def _get_current_for(new_name):
 
 
 def repair(log_csv_name):
-    df = pd.read_csv(log_csv_name, parse_dates=["date"], na_values=["-", "", "\"-\""])
+    df = pd.read_csv(log_csv_name, parse_dates=["date"], na_values=["-", "", "\"-\""], on_bad_lines='skip')
     if df.empty:
         return log_csv_name
     df["added"] = df["added"].fillna("0").astype(int)
@@ -137,15 +137,15 @@ def repair(log_csv_name):
             final_currents.append(_get_current_for(row.fname))
     df.current = final_currents
 
-    df['file_count'] = 0
 
-    # # 在合并之前，确保处理 NaN 值并转换为字符串
-    # df['fname'] = df['fname'].fillna('-').astype(str)
-    # df['current'] = df['current'].fillna('-').astype(str)
-    # df['old'] = df['old'].fillna('-').astype(str)
-    # df['new'] = df['new'].fillna('-').astype(str)
+    # 在合并之前，确保处理 NaN 值并转换为字符串
+    df['fname'] = df['fname'].fillna('-').astype(str)
+    df['current'] = df['current'].fillna('-').astype(str)
+    df['old'] = df['old'].fillna('-').astype(str)
+    df['new'] = df['new'].fillna('-').astype(str)
 
     # 进行分组，基于 'hash' 字段
+    df['file_count'] = 1  # 创建 file_count 列
     df = df.groupby('hash').agg({
         'added': 'sum',                 # 将 'added' 字段求和
         'removed': 'sum',               # 将 'removed' 字段求和
@@ -159,7 +159,7 @@ def repair(log_csv_name):
         'committer_email': 'first',        # 保留第一个 author_email
         'date': 'first',                # 保留第一个 date
         'message': 'first',             # 保留第一个 message
-        'file_count': 'size'            # 计算每组的行数
+        'file_count': 'sum'            # 计算每组的行数
     }).reset_index()
 
     # 根据 date 字段排序
@@ -181,7 +181,7 @@ def simple(log_csv_name):
 
     df["current"] = df.fname
 
-    df = df.drop(columns=['message', 'added', 'removed', 'fname', 'current', 'old', 'new', 'file_count', 'message']) 
+    df = df.drop(columns=['message', 'added', 'removed', 'fname', 'current', 'old', 'new', 'message']) 
     
     # 进行分组，基于 'hash' 字段
     df = df.groupby('hash').agg({
