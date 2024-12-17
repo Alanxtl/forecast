@@ -4,12 +4,18 @@ from sys import flags
 import threading
 import time
 
+from numpy import ndarray
+from sklearn.manifold import smacof
 import streamlit as st
 from streamlit_echarts import st_echarts
 from loguru import logger
 
+import joblib
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+
 from src.dataset import repo as Repo
 from src.config import Config as config
+from src.model.process import process, open_dataset
 
 conf = config.get_config()
 logger.add(conf["log_path"] + "/{time}.log", level="DEBUG")
@@ -115,7 +121,9 @@ if st.button("Fetch Data"):
         # 图表-1
         options0 = generate_chart_options(
             "Commit Data",
-            ["Commits", "Commits From Bots", "Modified File Count on Average"],
+            ["Commits", 
+            #  "Commits From Bots", 
+             "Modified File Count on Average"],
             slice_starts,
             [
                 {"type": "value", "name": "Commits (n)", "position": "left"},
@@ -123,7 +131,7 @@ if st.button("Fetch Data"):
             ],
             [
                 {"name": "Commits", "type": "line", "data": data["commit_data"][0], "yAxisIndex": 0},
-                {"name": "Commits From Bots", "type": "line", "data": data["commit_data"][2], "yAxisIndex": 0},
+                # {"name": "Commits From Bots", "type": "line", "data": data["commit_data"][2], "yAxisIndex": 0},
                 {"name": "Modified File Count on Average", "type": "line", "data": data["commit_data"][1], "yAxisIndex": 1},
             ]
         )
@@ -146,6 +154,7 @@ if st.button("Fetch Data"):
                 if flags[j - 1]:
                     progress_bars[j].progress(min(90, t + 10 + random.randint(0, 3)))
 
+            
             # 图表0
             this = 0
             if flags[this]:
@@ -162,10 +171,10 @@ if st.button("Fetch Data"):
                     [{"name": "Stars", "type": "line", "data": data["basic_data"], "yAxisIndex": 0}]
                 )
 
-                st_echarts(options=opt0, height="400px", key="Repo_Basic_Data")
                 with lock:
                     flags[this] = False
                     
+
             # 图表1
             this = 1
             if flags[this]:
@@ -190,7 +199,6 @@ if st.button("Fetch Data"):
                     ]
                 )
 
-                st_echarts(options=opt1, height="400px", key="Issue_Data")
                 with lock:
                     flags[this] = False
 
@@ -214,7 +222,6 @@ if st.button("Fetch Data"):
                 )
 
                 # 绘制线图
-                st_echarts(options=opt2, height="400px", key="Code_Data")
                 with lock:
                     flags[this] = False
                     
@@ -238,7 +245,6 @@ if st.button("Fetch Data"):
                 )
 
                 # 绘制线图
-                st_echarts(options=opt3, height="400px", key="Social_Data")
                 with lock:
                     flags[this] = False
 
@@ -266,7 +272,6 @@ if st.button("Fetch Data"):
                 )
 
                 # 绘制线图
-                st_echarts(options=opt4, height="400px", key="pr_data")
                 with lock:
                     flags[this] = False
                     
@@ -322,22 +327,48 @@ if st.button("Fetch Data"):
                 )
 
                 # 绘制线图
-                st_echarts(options=opt5, height="400px", key="code_ana_data")
-                st_echarts(options=opt6, height="400px", key="fork_data")
-                st_echarts(options=opt7, height="400px", key="release_data")
+
                 with lock:
                     flags[this] = False
                     
 
+
         for thread in threads:
             thread.join()
 
+
+        # 模型预测
+        reg_jlib = joblib.load("./src/model/model.jlib")
+        _, d = process(open_dataset(repo.to_dataset()))
+        y_pred: ndarray = reg_jlib.predict(d)
+
+        pred = generate_chart_options(
+            "Prediction",
+            ["Real Commits", "Predicted Commits"],
+            slice_starts,
+            [{"type": "value", "name": "Commits (n)", "position": "left"}],
+            [{"name": "Commits", "type": "line", "data": data["commit_data"][0], "yAxisIndex": 0},
+             {"name": "Predicted Commits", "type": "line", "data": y_pred.tolist(), "yAxisIndex": 0, "smooth": True,
+              "areaStyle": {}}])
+
+        st_echarts(options=pred, height="400px", key="Prediction")
+
+        with st.expander("Detailed Information", expanded=False):
+            st_echarts(options=opt0, height="400px", key="Repo_Basic_Data")
+            st_echarts(options=opt1, height="400px", key="Issue_Data")
+            # st_echarts(options=opt2, height="400px", key="Code_Data")
+            # st_echarts(options=opt3, height="400px", key="Social_Data")
+            st_echarts(options=opt4, height="400px", key="pr_data")
+            st_echarts(options=opt5, height="400px", key="code_ana_data")
+            st_echarts(options=opt6, height="400px", key="fork_data")
+            st_echarts(options=opt7, height="400px", key="release_data")
 
         repo.out_put_to_log()
 
         with st.expander("Repository Summary", expanded=False):
             for key, value in repo.get_summary().items():
                 st.write(f"**{key}:** {value}")
+
 
     else:
         st.warning("Please enter both Owner Name and Repository Name.")

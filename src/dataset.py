@@ -283,7 +283,7 @@ class repo:
         file_exists = os.path.isfile(to_file)
 
         if file_exists:
-            return 
+            return to_file
 
 
         self.get_commit_data()
@@ -354,3 +354,5 @@ class repo:
         logger.success(f"Data of {self.owner_name}/{self.repo_name} has been saved to {to_file}")
         
         df.to_csv(to_file, mode='a', index=False, header=not file_exists)
+
+        return to_file

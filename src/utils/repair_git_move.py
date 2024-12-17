@@ -176,10 +176,12 @@ def simple(log_csv_name):
     df["date"] = df["date"].apply(lambda x: parse_datetime(x))
     if df.empty:
         return log_csv_name
+    
     df["added"] = df["added"].fillna("0").astype(int)
     df["removed"] = df["removed"].fillna("0").astype(int)
 
     df["current"] = df.fname
+
 
     df = df.drop(columns=['message', 'added', 'removed', 'fname', 'current', 'old', 'new', 'message']) 
     
